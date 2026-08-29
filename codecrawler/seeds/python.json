@@ -1,0 +1,968 @@
+[
+  {
+    "lexeme": "(", "token_type": "OP", "role": "call",
+    "title": "Call parentheses",
+    "short": "Runs the callable named just before it, passing whatever is between the parentheses as arguments.",
+    "long": "The parentheses are what actually executes a function; the name on its own only refers to it. Whatever sits between them becomes the arguments. An empty pair still calls the function, just with no arguments.",
+    "example": "print(\"hi\")"
+  },
+  {
+    "lexeme": "(", "token_type": "OP", "role": "func-def-params",
+    "title": "Parameter list opener",
+    "short": "Begins the list of parameters a function accepts, right after its name in a def statement.",
+    "long": "Everything up to the matching ) names the inputs the function expects. This is a declaration, not a call, so no code runs here. An empty pair means the function takes no parameters.",
+    "example": "def greet(name):"
+  },
+  {
+    "lexeme": "(", "token_type": "OP", "role": "class-bases",
+    "title": "Base class list opener",
+    "short": "Begins the list of parent classes this class inherits from.",
+    "long": "Names between the parentheses are superclasses; their attributes and methods are inherited. Leaving the parentheses off means the class inherits only from object.",
+    "example": "class Dog(Animal):"
+  },
+  {
+    "lexeme": "(", "token_type": "OP", "role": "tuple",
+    "title": "Tuple grouping",
+    "short": "Bounds a set of comma-separated values that together form one immutable tuple.",
+    "long": "It is really the commas that build the tuple; the parentheses just delimit it and make it readable. A single-element tuple needs a trailing comma: (1,). The empty pair () is the one case that means an empty tuple by itself.",
+    "example": "point = (3, 4)"
+  },
+  {
+    "lexeme": "(", "token_type": "OP", "role": "generator",
+    "title": "Generator expression",
+    "short": "Wraps a lazy generator expression that yields values one at a time instead of building a collection.",
+    "long": "It looks like a list comprehension but with parentheses, so nothing is materialised up front. Each value is computed only when consumed, which keeps memory flat for large sequences.",
+    "example": "sum(x * x for x in nums)"
+  },
+  {
+    "lexeme": "(", "token_type": "OP", "role": "group",
+    "title": "Grouping parentheses",
+    "short": "Groups a sub-expression so it is evaluated first, overriding normal operator precedence.",
+    "long": "This creates no object; it only controls evaluation order and readability. It is also the clean way to spread a long expression across several lines without trailing backslashes.",
+    "example": "(a + b) * c"
+  },
+  {
+    "lexeme": ")", "token_type": "OP", "role": "",
+    "title": "Closing parenthesis",
+    "short": "Closes the nearest open ( — ending an argument list, a parameter list, a tuple, or a grouped expression.",
+    "long": "Every ( must be balanced by exactly one ). For a call or class definition, reaching this point is what triggers the call or builds the class.",
+    "example": "print(\"hi\")"
+  },
+  {
+    "lexeme": "[", "token_type": "OP", "role": "list",
+    "title": "List literal opener",
+    "short": "Begins a list: an ordered, mutable sequence of the comma-separated values that follow.",
+    "long": "The brackets themselves construct a new list object. An empty pair [] is a valid empty list. Items keep their insertion order and can be changed, added, or removed later.",
+    "example": "colors = [\"red\", \"green\"]"
+  },
+  {
+    "lexeme": "[", "token_type": "OP", "role": "subscript",
+    "title": "Subscript / index bracket",
+    "short": "Indexes into or slices the object immediately before it — a list, string, dict, or anything defining __getitem__.",
+    "long": "What goes inside is a key, an integer index (negative counts from the end), or a slice. The object decides what the brackets mean, so the same syntax reads a list element, a dict value, or a DataFrame column.",
+    "example": "first = items[0]"
+  },
+  {
+    "lexeme": "[", "token_type": "OP", "role": "list-comp",
+    "title": "List comprehension",
+    "short": "Builds a new list by evaluating an expression once per item drawn from an iterable, optionally filtered.",
+    "long": "It is a compact for-loop that collects results. Read it left to right: the output expression, then the for clause, then any if filter. The whole thing produces one finished list.",
+    "example": "squares = [n * n for n in range(5)]"
+  },
+  {
+    "lexeme": "]", "token_type": "OP", "role": "",
+    "title": "Closing bracket",
+    "short": "Closes the nearest open [ — ending a list literal, an index/slice, or a list comprehension.",
+    "long": "Every [ pairs with exactly one ]. For a subscript it marks where the index expression stops.",
+    "example": "items[0]"
+  },
+  {
+    "lexeme": "{", "token_type": "OP", "role": "dict",
+    "title": "Dict literal opener",
+    "short": "Begins a dictionary: a set of key: value pairs giving fast lookup by key.",
+    "long": "The braces build a new dict object. Keys must be hashable and unique; assigning a duplicate key overwrites it. An empty pair {} is an empty dict, not an empty set.",
+    "example": "ages = {\"ana\": 30}"
+  },
+  {
+    "lexeme": "{", "token_type": "OP", "role": "set",
+    "title": "Set literal opener",
+    "short": "Begins a set: an unordered collection of unique, hashable values with no keys.",
+    "long": "Written like a dict but with bare values and no colons. Duplicates are silently dropped. There is no empty-set literal — use set() for that, since {} means an empty dict.",
+    "example": "seen = {1, 2, 3}"
+  },
+  {
+    "lexeme": "{", "token_type": "OP", "role": "dict-comp",
+    "title": "Dict comprehension",
+    "short": "Builds a dict by producing a key: value pair for each item taken from an iterable.",
+    "long": "Same shape as a list comprehension but the output is 'key: value'. Later pairs with a repeated key win.",
+    "example": "{c: ord(c) for c in \"abc\"}"
+  },
+  {
+    "lexeme": "{", "token_type": "OP", "role": "set-comp",
+    "title": "Set comprehension",
+    "short": "Builds a set by evaluating one expression per item from an iterable, keeping only distinct results.",
+    "long": "Like a list comprehension but wrapped in braces with a single output expression, so the result is a set with duplicates removed.",
+    "example": "{len(w) for w in words}"
+  },
+  {
+    "lexeme": "{", "token_type": "OP", "role": "fstring-field",
+    "title": "f-string replacement field",
+    "short": "Opens a slot inside an f-string where the enclosed expression is evaluated and its result inserted.",
+    "long": "Only valid inside a string with an f prefix. An optional !r/!s conversion and a :format-spec may follow the expression before the closing brace. To print a literal brace in an f-string, double it: {{ or }}.",
+    "example": "f\"hi {name.upper()}\""
+  },
+  {
+    "lexeme": "}", "token_type": "OP", "role": "",
+    "title": "Closing brace",
+    "short": "Closes the nearest open { — ending a dict or set literal, a comprehension, or an f-string field.",
+    "long": "Every { pairs with exactly one }. Inside an f-string it marks where the embedded expression ends.",
+    "example": "{\"a\": 1}"
+  },
+  {
+    "lexeme": ":", "token_type": "OP", "role": "block",
+    "title": "Block colon",
+    "short": "Ends a compound-statement header (def, class, if, for, while, with, try, else, except) and introduces its indented body.",
+    "long": "Everything indented under the next lines belongs to this block. The colon is required even when the body is a single line written after it.",
+    "example": "if ready:"
+  },
+  {
+    "lexeme": ":", "token_type": "OP", "role": "annotation",
+    "title": "Type annotation colon",
+    "short": "Separates a name from a type hint, on a variable or a function parameter.",
+    "long": "The annotation is recorded but not enforced at runtime; it documents intent and helps type checkers and editors. A default value, if any, comes after the annotation with =.",
+    "example": "count: int = 0"
+  },
+  {
+    "lexeme": ":", "token_type": "OP", "role": "slice",
+    "title": "Slice colon",
+    "short": "Separates start, stop, and step inside square brackets to select a range rather than a single item.",
+    "long": "The form is [start:stop:step]; any part may be omitted. stop is exclusive. A bare [:] copies the whole sequence.",
+    "example": "middle = seq[1:4]"
+  },
+  {
+    "lexeme": ":", "token_type": "OP", "role": "dict-pair",
+    "title": "Key/value colon",
+    "short": "Binds a key to its value inside a dict literal or dict comprehension.",
+    "long": "The expression on the left is the key (it must be hashable); the expression on the right is the stored value.",
+    "example": "{\"ana\": 30}"
+  },
+  {
+    "lexeme": ":", "token_type": "OP", "role": "lambda",
+    "title": "Lambda colon",
+    "short": "Separates a lambda's parameter list from the single expression it returns.",
+    "long": "A lambda has no block and no return statement; whatever follows the colon is evaluated and returned when the lambda is called.",
+    "example": "key = lambda p: p.age"
+  },
+  {
+    "lexeme": ",", "token_type": "OP", "role": "separator",
+    "title": "Comma separator",
+    "short": "Separates items in a list, tuple, set, dict, call, or parameter list.",
+    "long": "In tuple context the comma is the operator that actually builds the tuple. A trailing comma before a closing bracket is legal and keeps diffs small.",
+    "example": "f(a, b, c)"
+  },
+  {
+    "lexeme": ".", "token_type": "OP", "role": "attribute",
+    "title": "Attribute access",
+    "short": "Reaches into the object on its left to get the named attribute or method that follows.",
+    "long": "Python looks the name up on the instance, then its class, then base classes. A trailing () after the name would then call the method it found.",
+    "example": "name.upper()"
+  },
+  {
+    "lexeme": ";", "token_type": "OP", "role": "",
+    "title": "Statement separator",
+    "short": "Puts two simple statements on one physical line.",
+    "long": "Rarely used in idiomatic Python, which prefers one statement per line. It cannot join compound statements such as def or if.",
+    "example": "x = 1; y = 2"
+  },
+  {
+    "lexeme": "...", "token_type": "OP", "role": "",
+    "title": "Ellipsis literal",
+    "short": "The singleton Ellipsis object, most often used as a 'to be filled in' placeholder body.",
+    "long": "In stub files and abstract methods it stands in for real code. NumPy also uses it inside subscripts to mean 'all remaining axes'.",
+    "example": "def todo() -> None: ..."
+  },
+  {
+    "lexeme": "@", "token_type": "OP", "role": "decorator",
+    "title": "Decorator",
+    "short": "Wraps the function or class defined just below it with the callable named after the @.",
+    "long": "def f... followed by @deco is shorthand for f = deco(f). Decorators add behaviour (caching, registration, access checks) without editing the function body. Multiple decorators apply bottom-up.",
+    "example": "@staticmethod"
+  },
+  {
+    "lexeme": "@", "token_type": "OP", "role": "matmul",
+    "title": "Matrix multiplication operator",
+    "short": "Multiplies two operands using their __matmul__ method — matrix product for NumPy arrays.",
+    "long": "Distinct from * which is element-wise. Plain Python numbers do not define it; it is meaningful mainly for array libraries.",
+    "example": "result = a @ b"
+  },
+  {
+    "lexeme": "->", "token_type": "OP", "role": "return-annotation",
+    "title": "Return type annotation",
+    "short": "Introduces the hint for what a function returns, between the parameter list's ) and the block colon.",
+    "long": "Like other annotations it is informational, not enforced. Use -> None for functions that return nothing useful.",
+    "example": "def area(r: float) -> float:"
+  },
+  {
+    "lexeme": ":=", "token_type": "OP", "role": "",
+    "title": "Walrus / assignment expression",
+    "short": "Assigns a value to a name and returns that value as part of a larger expression.",
+    "long": "Lets you bind and test in one place, e.g. in a while condition or an if. Needs parentheses in many positions. Use sparingly — it can hurt readability.",
+    "example": "if (n := len(data)) > 10:"
+  },
+  {
+    "lexeme": "=", "token_type": "OP", "role": "assign",
+    "title": "Assignment",
+    "short": "Binds the name on the left to the object produced by the expression on the right.",
+    "long": "It does not copy; the name becomes another reference to the same object. Chained targets (a = b = 0) bind several names to one value.",
+    "example": "total = 0"
+  },
+  {
+    "lexeme": "=", "token_type": "OP", "role": "kwarg",
+    "title": "Keyword argument",
+    "short": "Passes an argument by parameter name inside a call: name=value.",
+    "long": "No spaces around = by convention here. Keyword arguments may appear in any order and make call sites self-documenting.",
+    "example": "sorted(xs, reverse=True)"
+  },
+  {
+    "lexeme": "=", "token_type": "OP", "role": "param-default",
+    "title": "Default parameter value",
+    "short": "Gives a parameter a fallback value used when the caller omits it.",
+    "long": "Evaluated once, when the def runs — so a mutable default like [] is shared across calls and is usually a bug. Prefer None plus a check inside.",
+    "example": "def f(x, base=10):"
+  },
+  {
+    "lexeme": "=", "token_type": "OP", "role": "annotated-assign",
+    "title": "Annotated assignment",
+    "short": "Assigns a value on a line that also carries a type annotation after the name.",
+    "long": "The form is name: Type = value. The annotation is stored in __annotations__; the = part does the actual binding.",
+    "example": "count: int = 0"
+  },
+  {
+    "lexeme": "+", "token_type": "OP", "role": "arithmetic",
+    "title": "Addition / concatenation",
+    "short": "Adds numbers, or joins two sequences of the same kind (str+str, list+list).",
+    "long": "The operands must be compatible: you cannot add a str and an int. For repeated joining of many strings, ''.join() is faster than chained +.",
+    "example": "total = a + b"
+  },
+  {
+    "lexeme": "+", "token_type": "OP", "role": "unary",
+    "title": "Unary plus",
+    "short": "A no-op on ordinary numbers; kept for symmetry with unary minus and custom __pos__.",
+    "long": "You will rarely write it. Some Decimal contexts use it to apply rounding, and custom classes may override __pos__.",
+    "example": "y = +x"
+  },
+  {
+    "lexeme": "-", "token_type": "OP", "role": "arithmetic",
+    "title": "Subtraction",
+    "short": "Subtracts the right operand from the left; also set difference for two sets.",
+    "long": "Works on all numeric types, mixing int and float by promoting to float.",
+    "example": "diff = a - b"
+  },
+  {
+    "lexeme": "-", "token_type": "OP", "role": "unary",
+    "title": "Unary minus / negation",
+    "short": "Negates the value that follows it.",
+    "long": "Binds tighter than most binary operators, so -a ** 2 is -(a ** 2). Calls __neg__ on custom types.",
+    "example": "y = -x"
+  },
+  {
+    "lexeme": "*", "token_type": "OP", "role": "arithmetic",
+    "title": "Multiplication / repetition",
+    "short": "Multiplies numbers, or repeats a sequence a whole number of times (\"ab\" * 3).",
+    "long": "Sequence repetition shares references, so [ [] ] * 3 gives three views of the same inner list.",
+    "example": "area = w * h"
+  },
+  {
+    "lexeme": "*", "token_type": "OP", "role": "var-positional",
+    "title": "*args parameter",
+    "short": "In a def, collects all extra positional arguments into one tuple.",
+    "long": "A bare * with no name instead marks the start of keyword-only parameters. The conventional name is args.",
+    "example": "def f(first, *rest):"
+  },
+  {
+    "lexeme": "*", "token_type": "OP", "role": "unpack",
+    "title": "Iterable unpacking",
+    "short": "Spreads the items of an iterable into a call, a list/tuple literal, or an assignment target.",
+    "long": "f(*xs) passes each element as its own argument; [*a, *b] concatenates; first, *rest = seq captures the remainder as a list.",
+    "example": "merged = [*a, *b]"
+  },
+  {
+    "lexeme": "**", "token_type": "OP", "role": "arithmetic",
+    "title": "Exponentiation",
+    "short": "Raises the left operand to the power of the right.",
+    "long": "Right-associative: 2 ** 3 ** 2 is 2 ** 9. A negative or fractional exponent yields a float (or complex).",
+    "example": "sq = n ** 2"
+  },
+  {
+    "lexeme": "**", "token_type": "OP", "role": "var-keyword",
+    "title": "**kwargs parameter",
+    "short": "In a def, collects all extra keyword arguments into one dict.",
+    "long": "The conventional name is kwargs. It must come last in the parameter list.",
+    "example": "def f(**opts):"
+  },
+  {
+    "lexeme": "**", "token_type": "OP", "role": "unpack",
+    "title": "Mapping unpacking",
+    "short": "Spreads a dict's key/value pairs into a call as keyword arguments or into another dict literal.",
+    "long": "f(**opts) is the same as passing each key=value; {**a, **b} merges dicts, with b winning on shared keys.",
+    "example": "config = {**defaults, **overrides}"
+  },
+  {
+    "lexeme": "/", "token_type": "OP", "role": "arithmetic",
+    "title": "True division",
+    "short": "Divides and always produces a float, even when the result is whole.",
+    "long": "10 / 2 is 5.0, not 5. Dividing by zero raises ZeroDivisionError.",
+    "example": "avg = total / n"
+  },
+  {
+    "lexeme": "/", "token_type": "OP", "role": "posonly-marker",
+    "title": "Positional-only marker",
+    "short": "In a def parameter list, everything before the / must be passed positionally, never by name.",
+    "long": "Lets a library rename parameters later without breaking callers. Mirrors the * that starts keyword-only parameters.",
+    "example": "def f(x, y, /, z):"
+  },
+  {
+    "lexeme": "//", "token_type": "OP", "role": "arithmetic",
+    "title": "Floor division",
+    "short": "Divides and rounds the result down to the nearest whole number, toward negative infinity.",
+    "long": "7 // 2 is 3; -7 // 2 is -4. Returns an int when both operands are ints, otherwise a whole-valued float.",
+    "example": "pages = items // per_page"
+  },
+  {
+    "lexeme": "%", "token_type": "OP", "role": "arithmetic",
+    "title": "Modulo / remainder",
+    "short": "Gives the remainder after floor division; the result takes the sign of the divisor.",
+    "long": "Common uses: n % 2 to test even/odd, i % len to wrap an index. With a string on the left it is instead old-style printf formatting.",
+    "example": "if n % 2 == 0:"
+  },
+  {
+    "lexeme": "&", "token_type": "OP", "role": "bitwise",
+    "title": "Bitwise AND / set intersection",
+    "short": "Combines two integers bit by bit (1 only where both bits are 1), or intersects two sets.",
+    "long": "Often used with a bit mask to keep selected bits: flags & MASK.",
+    "example": "low = value & 0xFF"
+  },
+  {
+    "lexeme": "|", "token_type": "OP", "role": "bitwise",
+    "title": "Bitwise OR / set union / type union",
+    "short": "ORs two integers bit by bit, unions two sets, or forms a union type like int | None.",
+    "long": "The type-union meaning (PEP 604) works in annotations and, since 3.10, at runtime for isinstance.",
+    "example": "mode = READ | WRITE"
+  },
+  {
+    "lexeme": "^", "token_type": "OP", "role": "bitwise",
+    "title": "Bitwise XOR / symmetric difference",
+    "short": "Sets each result bit where exactly one operand's bit is 1; for sets, the elements in one but not both.",
+    "long": "x ^ x is 0, which makes it handy for toggling bits and simple parity checks.",
+    "example": "toggled = flags ^ BIT"
+  },
+  {
+    "lexeme": "~", "token_type": "OP", "role": "bitwise",
+    "title": "Bitwise NOT",
+    "short": "Flips every bit of an integer; because of two's complement, ~n equals -(n + 1).",
+    "long": "Occasionally used as a 'from the other end' index trick: seq[~i] is seq[-i-1].",
+    "example": "inv = ~mask"
+  },
+  {
+    "lexeme": "<<", "token_type": "OP", "role": "bitwise",
+    "title": "Left shift",
+    "short": "Shifts an integer's bits left by n places, which multiplies it by 2 ** n.",
+    "long": "Used to build masks (1 << bit) and to pack fields into a single integer.",
+    "example": "mask = 1 << 4"
+  },
+  {
+    "lexeme": ">>", "token_type": "OP", "role": "bitwise",
+    "title": "Right shift",
+    "short": "Shifts an integer's bits right by n places, an efficient floor-divide by 2 ** n.",
+    "long": "For non-negative numbers it simply drops the low bits.",
+    "example": "high = byte >> 4"
+  },
+  {
+    "lexeme": "<", "token_type": "OP", "role": "comparison",
+    "title": "Less-than",
+    "short": "True when the left value orders before the right; also proper-subset for sets.",
+    "long": "Comparisons chain: a < b < c means a < b and b < c, with b evaluated once.",
+    "example": "if age < 18:"
+  },
+  {
+    "lexeme": ">", "token_type": "OP", "role": "comparison",
+    "title": "Greater-than",
+    "short": "True when the left value orders after the right; also proper-superset for sets.",
+    "long": "Mixing unorderable types (str and int) raises TypeError rather than guessing.",
+    "example": "if score > best:"
+  },
+  {
+    "lexeme": "<=", "token_type": "OP", "role": "comparison",
+    "title": "Less-than-or-equal",
+    "short": "True when the left value is smaller than or equal to the right; subset for sets.",
+    "long": "Reads as one operator, so no space between < and =.",
+    "example": "if i <= last:"
+  },
+  {
+    "lexeme": ">=", "token_type": "OP", "role": "comparison",
+    "title": "Greater-than-or-equal",
+    "short": "True when the left value is larger than or equal to the right; superset for sets.",
+    "example": "if n >= 0:"
+  },
+  {
+    "lexeme": "==", "token_type": "OP", "role": "comparison",
+    "title": "Equality test",
+    "short": "Compares values for equality and returns a bool; it does not assign.",
+    "long": "Different from is, which checks identity. Custom classes control == through __eq__; without one, it falls back to identity.",
+    "example": "if answer == expected:"
+  },
+  {
+    "lexeme": "!=", "token_type": "OP", "role": "comparison",
+    "title": "Inequality test",
+    "short": "True when the two values are not equal; the negation of ==.",
+    "example": "if status != \"ok\":"
+  },
+  {
+    "lexeme": "+=", "token_type": "OP", "role": "aug-assign",
+    "title": "Add-and-assign",
+    "short": "Adds the right side to the current value of the left and rebinds the name to the result.",
+    "long": "For mutable objects like lists it updates in place (calls __iadd__); for immutables like ints and strings it builds a new object and rebinds.",
+    "example": "total += amount"
+  },
+  {
+    "lexeme": "-=", "token_type": "OP", "role": "aug-assign",
+    "title": "Subtract-and-assign",
+    "short": "Subtracts the right side from the left and stores the result back in the same name.",
+    "example": "remaining -= 1"
+  },
+  {
+    "lexeme": "*=", "token_type": "OP", "role": "aug-assign",
+    "title": "Multiply-and-assign",
+    "short": "Multiplies the left value by the right and rebinds the name to the product.",
+    "example": "scale *= 2"
+  },
+  {
+    "lexeme": "/=", "token_type": "OP", "role": "aug-assign",
+    "title": "Divide-and-assign",
+    "short": "Divides the left value by the right (true division, float result) and rebinds the name.",
+    "example": "ratio /= count"
+  },
+  {
+    "lexeme": "//=", "token_type": "OP", "role": "aug-assign",
+    "title": "Floor-divide-and-assign",
+    "short": "Floor-divides the left value by the right and stores the whole-number result back.",
+    "example": "n //= 10"
+  },
+  {
+    "lexeme": "%=", "token_type": "OP", "role": "aug-assign",
+    "title": "Modulo-and-assign",
+    "short": "Replaces the left value with its remainder when divided by the right.",
+    "example": "i %= size"
+  },
+  {
+    "lexeme": "**=", "token_type": "OP", "role": "aug-assign",
+    "title": "Power-and-assign",
+    "short": "Raises the left value to the power of the right and rebinds the name.",
+    "example": "x **= 2"
+  },
+  {
+    "lexeme": "&=", "token_type": "OP", "role": "aug-assign",
+    "title": "AND-and-assign",
+    "short": "Bitwise-ANDs the left value with the right (or intersects sets) and stores it back.",
+    "example": "flags &= MASK"
+  },
+  {
+    "lexeme": "|=", "token_type": "OP", "role": "aug-assign",
+    "title": "OR-and-assign",
+    "short": "Bitwise-ORs the left value with the right, unions sets, or updates a dict in place.",
+    "example": "opts |= extra"
+  },
+  {
+    "lexeme": "^=", "token_type": "OP", "role": "aug-assign",
+    "title": "XOR-and-assign",
+    "short": "Bitwise-XORs the left value with the right (or symmetric-difference for sets) and rebinds it.",
+    "example": "bits ^= TOGGLE"
+  },
+  {
+    "lexeme": "<<=", "token_type": "OP", "role": "aug-assign",
+    "title": "Left-shift-and-assign",
+    "short": "Shifts the left value's bits left by the right amount and stores the result back.",
+    "example": "reg <<= 1"
+  },
+  {
+    "lexeme": ">>=", "token_type": "OP", "role": "aug-assign",
+    "title": "Right-shift-and-assign",
+    "short": "Shifts the left value's bits right by the right amount and rebinds the name.",
+    "example": "reg >>= 8"
+  },
+  {
+    "lexeme": "@=", "token_type": "OP", "role": "aug-assign",
+    "title": "Matmul-and-assign",
+    "short": "Matrix-multiplies the left operand by the right in place; meaningful for array libraries.",
+    "example": "m @= rotation"
+  },
+  {
+    "lexeme": "and", "token_type": "KEYWORD", "role": "",
+    "title": "Logical AND",
+    "short": "True only if both sides are truthy; short-circuits and returns the first falsy operand, else the last.",
+    "long": "The right side is not evaluated when the left is already falsy. Because it returns an operand (not a strict bool), x and default is a common guard.",
+    "example": "if ok and ready:"
+  },
+  {
+    "lexeme": "or", "token_type": "KEYWORD", "role": "",
+    "title": "Logical OR",
+    "short": "True if either side is truthy; short-circuits and returns the first truthy operand, else the last.",
+    "long": "value or fallback supplies a default when value is empty, 0, None, or False.",
+    "example": "name = given or \"anon\""
+  },
+  {
+    "lexeme": "not", "token_type": "KEYWORD", "role": "",
+    "title": "Logical NOT",
+    "short": "Inverts truthiness, always returning a real bool.",
+    "long": "Lower precedence than comparisons, so not a == b is not (a == b). Also pairs with in and is: not in, is not.",
+    "example": "if not items:"
+  },
+  {
+    "lexeme": "in", "token_type": "KEYWORD", "role": "membership",
+    "title": "Membership test",
+    "short": "True when the left value is found in the container on the right.",
+    "long": "For dicts it checks keys; for strings it checks substrings. Efficient for sets and dicts, linear for lists.",
+    "example": "if key in cache:"
+  },
+  {
+    "lexeme": "in", "token_type": "KEYWORD", "role": "for-clause",
+    "title": "for ... in iterable",
+    "short": "Separates the loop variable(s) from the iterable a for loop or comprehension draws from.",
+    "long": "The iterable is asked for an iterator once; each pass binds the next item to the loop target.",
+    "example": "for line in file:"
+  },
+  {
+    "lexeme": "is", "token_type": "KEYWORD", "role": "",
+    "title": "Identity test",
+    "short": "True only when both sides are the exact same object in memory, not merely equal.",
+    "long": "Use it for singletons — is None, is True — and use == for value comparison. Small ints and interned strings may share identity as an implementation detail; do not rely on it.",
+    "example": "if result is None:"
+  },
+  {
+    "lexeme": "if", "token_type": "KEYWORD", "role": "statement",
+    "title": "if statement",
+    "short": "Runs the indented block below only when its condition is truthy.",
+    "long": "Optionally followed by elif and else clauses; the first matching branch runs and the rest are skipped.",
+    "example": "if score > 0:"
+  },
+  {
+    "lexeme": "if", "token_type": "KEYWORD", "role": "ternary",
+    "title": "Conditional expression",
+    "short": "In A if cond else B, chooses between two values inline without a full if block.",
+    "long": "The condition is evaluated first; only the chosen side is then evaluated. It is an expression, so it can sit inside a call or a list.",
+    "example": "label = \"+\" if n >= 0 else \"-\""
+  },
+  {
+    "lexeme": "if", "token_type": "KEYWORD", "role": "comp-filter",
+    "title": "Comprehension filter",
+    "short": "Keeps only the items for which the following condition is true.",
+    "long": "Placed after the for clause. With no else it filters; an if...else before the for is a conditional expression on the output instead.",
+    "example": "[n for n in xs if n > 0]"
+  },
+  {
+    "lexeme": "elif", "token_type": "KEYWORD", "role": "",
+    "title": "elif clause",
+    "short": "Tests another condition when all preceding if/elif conditions were false.",
+    "long": "Short for 'else if' but without the extra nesting. Only the first true branch in the chain runs.",
+    "example": "elif n == 0:"
+  },
+  {
+    "lexeme": "else", "token_type": "KEYWORD", "role": "",
+    "title": "else clause",
+    "short": "The fallback block that runs when the if/elif chain found no true condition.",
+    "long": "Also legal after for and while (runs if the loop was not broken out of) and after try (runs if no exception occurred).",
+    "example": "else:"
+  },
+  {
+    "lexeme": "for", "token_type": "KEYWORD", "role": "",
+    "title": "for loop",
+    "short": "Iterates over each item of an iterable, running the indented body once per item.",
+    "long": "Python's for is a for-each; there is no manual counter. Use enumerate() for an index, range() for a count. A trailing else runs only if the loop finished without break.",
+    "example": "for i, x in enumerate(xs):"
+  },
+  {
+    "lexeme": "while", "token_type": "KEYWORD", "role": "",
+    "title": "while loop",
+    "short": "Repeats the indented body as long as its condition stays truthy, checking before each pass.",
+    "long": "Best when the number of iterations is not known up front. Make sure something inside the body can eventually make the condition false, or add a break.",
+    "example": "while queue:"
+  },
+  {
+    "lexeme": "break", "token_type": "KEYWORD", "role": "",
+    "title": "break",
+    "short": "Immediately exits the innermost for or while loop, skipping any loop else clause.",
+    "long": "Only the one enclosing loop is left; outer loops keep running. To leave several at once, refactor into a function and return.",
+    "example": "if found: break"
+  },
+  {
+    "lexeme": "continue", "token_type": "KEYWORD", "role": "",
+    "title": "continue",
+    "short": "Skips the rest of the current loop iteration and jumps to the next one.",
+    "long": "The loop condition (while) or the next item (for) is evaluated as usual. Handy for skipping items that fail an early check.",
+    "example": "if line.startswith(\"#\"): continue"
+  },
+  {
+    "lexeme": "pass", "token_type": "KEYWORD", "role": "",
+    "title": "pass",
+    "short": "A statement that does nothing, used where syntax requires a body but you have no code yet.",
+    "long": "Common in stub classes and empty except blocks. Unlike a comment, it is a real statement the parser accepts as the whole body.",
+    "example": "class Todo: pass"
+  },
+  {
+    "lexeme": "return", "token_type": "KEYWORD", "role": "",
+    "title": "return",
+    "short": "Ends the current function call and hands a value back to whoever called it.",
+    "long": "return with no expression (or falling off the end of the function) returns None. Only valid inside a function.",
+    "example": "return total"
+  },
+  {
+    "lexeme": "yield", "token_type": "KEYWORD", "role": "",
+    "title": "yield",
+    "short": "Produces one value from a generator and pauses the function until the next value is requested.",
+    "long": "Any def containing yield is a generator function: calling it returns a generator object and runs no body until iterated. Local state is preserved between yields. yield from delegates to another iterable.",
+    "example": "yield line.strip()"
+  },
+  {
+    "lexeme": "def", "token_type": "KEYWORD", "role": "",
+    "title": "function definition",
+    "short": "Defines a named function: binds the name to a function object whose body is the indented block.",
+    "long": "The body does not run now — only when the function is later called. Parameters are listed in the parentheses; a docstring may be the first line of the body.",
+    "example": "def add(a, b):"
+  },
+  {
+    "lexeme": "class", "token_type": "KEYWORD", "role": "",
+    "title": "class definition",
+    "short": "Defines a new type: a template for objects that bundle data and the methods acting on it.",
+    "long": "The indented block runs once to build the class body; methods take self as their first parameter. Any base classes go in parentheses after the name.",
+    "example": "class Point:"
+  },
+  {
+    "lexeme": "lambda", "token_type": "KEYWORD", "role": "",
+    "title": "lambda expression",
+    "short": "Creates a small anonymous function in a single expression: lambda params: result.",
+    "long": "It has no name, no statements, and no annotations — just one expression that becomes the return value. Best for short callbacks like sort keys; name it with def if it grows.",
+    "example": "xs.sort(key=lambda p: p[1])"
+  },
+  {
+    "lexeme": "global", "token_type": "KEYWORD", "role": "",
+    "title": "global declaration",
+    "short": "Tells a function that the listed names refer to module-level variables, so assignments update those.",
+    "long": "Without it, assigning to a name inside a function creates a new local. Reading a global needs no declaration. Overuse of global makes code hard to follow.",
+    "example": "global _cache"
+  },
+  {
+    "lexeme": "nonlocal", "token_type": "KEYWORD", "role": "",
+    "title": "nonlocal declaration",
+    "short": "Binds a name to a variable in the nearest enclosing function, letting an inner function reassign it.",
+    "long": "Used in closures where an inner function needs to update state owned by the outer function rather than a global.",
+    "example": "nonlocal count"
+  },
+  {
+    "lexeme": "import", "token_type": "KEYWORD", "role": "",
+    "title": "import statement",
+    "short": "Loads another module and binds a name to it so its contents can be used.",
+    "long": "The module runs once on first import and is then cached. Plain import mod keeps the mod. prefix; from mod import name pulls a single object into the current namespace.",
+    "example": "import json"
+  },
+  {
+    "lexeme": "from", "token_type": "KEYWORD", "role": "import",
+    "title": "from ... import ...",
+    "short": "Imports specific names out of a module directly into the current namespace.",
+    "long": "from pkg import mod can also pull a submodule. A leading dot (from . import x) means a relative import within the same package.",
+    "example": "from pathlib import Path"
+  },
+  {
+    "lexeme": "as", "token_type": "KEYWORD", "role": "alias",
+    "title": "as (alias)",
+    "short": "Gives an imported name, a with-context, or a caught exception a local name of your choosing.",
+    "long": "import numpy as np renames on import; except ValueError as e binds the exception; with open(p) as f binds the context manager's result.",
+    "example": "import datetime as dt"
+  },
+  {
+    "lexeme": "with", "token_type": "KEYWORD", "role": "",
+    "title": "with statement",
+    "short": "Runs a block with a context manager that is guaranteed to be cleaned up on exit.",
+    "long": "The manager's setup runs on entry and its teardown runs on the way out, even if an exception is raised — closing files, releasing locks, ending transactions. Several managers can be comma-separated.",
+    "example": "with open(path) as f:"
+  },
+  {
+    "lexeme": "try", "token_type": "KEYWORD", "role": "",
+    "title": "try block",
+    "short": "Marks code whose exceptions should be caught by the except clauses that follow.",
+    "long": "Optional else runs when no exception was raised; finally always runs last for cleanup. Keep the protected block small so you catch only what you mean to.",
+    "example": "try:"
+  },
+  {
+    "lexeme": "except", "token_type": "KEYWORD", "role": "",
+    "title": "except clause",
+    "short": "Handles a matching exception raised in the try block.",
+    "long": "except SomeError as e binds the exception object. A bare except: catches almost everything and is discouraged. Clauses are tried top to bottom; the first match wins.",
+    "example": "except FileNotFoundError:"
+  },
+  {
+    "lexeme": "finally", "token_type": "KEYWORD", "role": "",
+    "title": "finally clause",
+    "short": "A block that always runs when leaving the try — normally, via exception, or via return.",
+    "long": "Use it for cleanup that must happen no matter what. A return or raise inside finally will override one from the try body.",
+    "example": "finally:"
+  },
+  {
+    "lexeme": "raise", "token_type": "KEYWORD", "role": "",
+    "title": "raise",
+    "short": "Throws an exception, unwinding the call stack until something catches it.",
+    "long": "raise Err(\"msg\") creates and throws; a bare raise inside an except re-throws the current one. raise X from Y records a cause for the traceback.",
+    "example": "raise ValueError(\"bad input\")"
+  },
+  {
+    "lexeme": "assert", "token_type": "KEYWORD", "role": "",
+    "title": "assert",
+    "short": "Raises AssertionError if the condition is false; an optional message follows a comma.",
+    "long": "A sanity check for 'this should never happen', not for validating user input — assertions are stripped when Python runs with -O.",
+    "example": "assert total >= 0, total"
+  },
+  {
+    "lexeme": "del", "token_type": "KEYWORD", "role": "",
+    "title": "del statement",
+    "short": "Unbinds a name, or removes an item/slice/attribute from a container.",
+    "long": "del x removes the name from the namespace; del d[key] deletes a mapping entry; del lst[1:3] removes a slice. It does not force the object to be freed if other references remain.",
+    "example": "del cache[key]"
+  },
+  {
+    "lexeme": "async", "token_type": "KEYWORD", "role": "",
+    "title": "async def / async for / async with",
+    "short": "Marks a coroutine or an async iteration/context that an event loop can suspend and resume.",
+    "long": "Calling an async def returns a coroutine that does nothing until awaited or scheduled on a loop. async for and async with work with asynchronous iterables and context managers.",
+    "example": "async def fetch(url):"
+  },
+  {
+    "lexeme": "await", "token_type": "KEYWORD", "role": "",
+    "title": "await",
+    "short": "Pauses the current coroutine until the awaited awaitable completes, yielding control to the event loop.",
+    "long": "Only valid inside an async def. While one coroutine is paused here, the loop can run others, which is where the concurrency comes from.",
+    "example": "data = await response.json()"
+  },
+  {
+    "lexeme": "True", "token_type": "KEYWORD", "role": "",
+    "title": "True",
+    "short": "The boolean true value; also equal to the integer 1.",
+    "long": "A keyword, so it cannot be reassigned. Comparisons and truthiness checks return this or False.",
+    "example": "done = True"
+  },
+  {
+    "lexeme": "False", "token_type": "KEYWORD", "role": "",
+    "title": "False",
+    "short": "The boolean false value; also equal to the integer 0.",
+    "long": "One of several falsy values, alongside None, 0, \"\", [], {}. A keyword and cannot be reassigned.",
+    "example": "found = False"
+  },
+  {
+    "lexeme": "None", "token_type": "KEYWORD", "role": "",
+    "title": "None",
+    "short": "The single 'no value' object, returned by functions that do not return anything else.",
+    "long": "Test for it with is None. Commonly used as a default parameter value that the function then replaces with a fresh object.",
+    "example": "result = None"
+  },
+  {
+    "lexeme": "\"", "token_type": "STRING", "role": "plain",
+    "title": "String literal",
+    "short": "A run of text; single and double quotes are interchangeable in Python.",
+    "long": "Backslash starts an escape (\\n, \\t, \\\"). Adjacent string literals with only whitespace between them are automatically concatenated.",
+    "example": "greeting = \"hello\""
+  },
+  {
+    "lexeme": "f\"", "token_type": "STRING", "role": "fstring",
+    "title": "f-string (formatted literal)",
+    "short": "A string whose { } fields hold expressions that are evaluated and inserted when the line runs.",
+    "long": "Add :spec for formatting (f\"{x:.2f}\") and ={ } to show both the expression and its value (f\"{x=}\"). Double a brace to print it literally.",
+    "example": "msg = f\"{name}: {score:.1f}\""
+  },
+  {
+    "lexeme": "r\"", "token_type": "STRING", "role": "raw",
+    "title": "raw string",
+    "short": "A string where backslashes are literal, so escape sequences are not processed.",
+    "long": "Ideal for regular expressions and Windows paths: r\"\\d+\" is a backslash then d, not a control character. It still cannot end with a lone backslash.",
+    "example": "pattern = r\"\\d{4}-\\d{2}\""
+  },
+  {
+    "lexeme": "b\"", "token_type": "STRING", "role": "bytes",
+    "title": "bytes literal",
+    "short": "A sequence of raw bytes (values 0-255) rather than text.",
+    "long": "Used for binary data and for I/O that has not been decoded to str yet. Indexing a bytes gives an int; slicing gives bytes.",
+    "example": "header = b\"\\x89PNG\""
+  },
+  {
+    "lexeme": "\"\"\"", "token_type": "STRING", "role": "triple",
+    "title": "triple-quoted string",
+    "short": "A string that may span multiple lines and contain unescaped single quotes.",
+    "long": "As the first statement of a module, class, or function it becomes the docstring. Line breaks inside it are part of the text.",
+    "example": "\"\"\"Return the total.\"\"\""
+  },
+  {
+    "lexeme": "int", "token_type": "NUMBER", "role": "int",
+    "title": "integer literal",
+    "short": "A whole number with unlimited precision — no overflow, no fixed width.",
+    "long": "Digits may be grouped with underscores for readability (1_000_000). A leading zero on a non-zero number is a syntax error; use 0o for octal.",
+    "example": "count = 42"
+  },
+  {
+    "lexeme": "float", "token_type": "NUMBER", "role": "float",
+    "title": "floating-point literal",
+    "short": "A number with a decimal point or exponent, stored as a 64-bit IEEE-754 double.",
+    "long": "Only approximate: 0.1 + 0.2 is not exactly 0.3. Compare with math.isclose, and use decimal.Decimal for money.",
+    "example": "pi = 3.14159"
+  },
+  {
+    "lexeme": "e", "token_type": "NUMBER", "role": "exponent",
+    "title": "scientific notation",
+    "short": "The e (or E) marks a power-of-ten exponent: 1e3 is 1000.0, 2.5e-4 is 0.00025.",
+    "long": "Any literal with an exponent is a float, even 1e0. The exponent must be an integer and may be signed.",
+    "example": "avogadro = 6.022e23"
+  },
+  {
+    "lexeme": "0x", "token_type": "NUMBER", "role": "hex",
+    "title": "hexadecimal literal",
+    "short": "Base-16 integer; digits 0-9 and a-f, prefix 0x.",
+    "long": "Compact for bit masks, colours, and byte values. 0xFF is 255. Case of the digits and the x does not matter.",
+    "example": "mask = 0xFF00"
+  },
+  {
+    "lexeme": "0o", "token_type": "NUMBER", "role": "octal",
+    "title": "octal literal",
+    "short": "Base-8 integer with prefix 0o; each digit is three bits.",
+    "long": "Mostly seen for Unix file permission bits, e.g. 0o755.",
+    "example": "mode = 0o644"
+  },
+  {
+    "lexeme": "0b", "token_type": "NUMBER", "role": "binary",
+    "title": "binary literal",
+    "short": "Base-2 integer with prefix 0b, written directly as bits.",
+    "long": "Useful for spelling out flags and masks. Underscores can group nibbles: 0b1010_0001.",
+    "example": "flags = 0b1011"
+  },
+  {
+    "lexeme": "_", "token_type": "NUMBER", "role": "digit-separator",
+    "title": "digit separator",
+    "short": "An underscore between digits that is ignored by Python and only aids reading.",
+    "long": "Allowed in any numeric base. It may not lead, trail, or be doubled: 1_000 is fine, _1000 and 1__000 are not.",
+    "example": "budget = 1_500_000"
+  },
+  {
+    "lexeme": "j", "token_type": "NUMBER", "role": "imaginary",
+    "title": "imaginary literal",
+    "short": "A trailing j (or J) makes the number the imaginary part of a complex value.",
+    "long": "3+4j is a complex number; access .real and .imag, or use cmath for complex math.",
+    "example": "z = 2 + 3j"
+  },
+  {
+    "lexeme": "#", "token_type": "COMMENT", "role": "",
+    "title": "comment",
+    "short": "Everything from the # to the end of the line is ignored by Python.",
+    "long": "There is no block-comment syntax; each line needs its own #. A # as the very first line with ! (a shebang) tells the OS which interpreter to run.",
+    "example": "x = 1  # reset counter"
+  },
+  {
+    "lexeme": "\\", "token_type": "OP", "role": "line-continuation",
+    "title": "explicit line continuation",
+    "short": "A backslash as the last character of a line joins it with the next physical line.",
+    "long": "Only needed outside brackets — code already inside (), [], or {} continues automatically, which is the preferred style. Nothing, not even a space, may follow the backslash.",
+    "example": "total = a + \\\n        b"
+  },
+  {
+    "lexeme": "INDENT", "token_type": "INDENT", "role": "",
+    "title": "indentation increase",
+    "short": "Leading whitespace that starts a new nested block; indentation is syntax in Python, not just style.",
+    "long": "The amount must be consistent within a block. Mixing tabs and spaces for the same block is an error. Four spaces per level is the convention.",
+    "example": "def f():\n    return 1"
+  },
+  {
+    "lexeme": "DEDENT", "token_type": "DEDENT", "role": "",
+    "title": "indentation decrease",
+    "short": "A drop back to a previous indentation level, which closes one or more nested blocks.",
+    "long": "The new indentation must line up exactly with an enclosing block, or Python raises an IndentationError.",
+    "example": "    return 1\nprint(f())"
+  },
+  {
+    "lexeme": "NEWLINE", "token_type": "NEWLINE", "role": "",
+    "title": "logical line end",
+    "short": "The end of a statement — the point where one instruction finishes and the next begins.",
+    "long": "Distinct from a blank line or a line break inside brackets, which the tokenizer treats as insignificant.",
+    "example": "x = 1\ny = 2"
+  },
+  {
+    "lexeme": "NL", "token_type": "NL", "role": "",
+    "title": "non-logical newline",
+    "short": "A line break that does not end a statement — a blank line, or a wrap inside ()/[]/{}.",
+    "long": "The tokenizer emits it so tools can reproduce formatting, but it has no effect on program meaning.",
+    "example": "xs = [\n    1,\n]"
+  },
+  {
+    "lexeme": "*", "token_type": "OP", "role": "kwonly-marker",
+    "title": "Keyword-only marker",
+    "short": "A bare * in a parameter list: every parameter after it must be passed by name, never positionally.",
+    "long": "It carries no name of its own. Callers then have to write func(..., flag=True) rather than relying on argument order, which keeps call sites readable.",
+    "example": "def f(a, *, verbose=False):"
+  },
+  {
+    "lexeme": "", "token_type": "NAME", "role": "",
+    "title": "Identifier",
+    "short": "A name your code chose — a variable, function, class, module, or attribute.",
+    "long": "Not a keyword, so you are free to (re)bind it. Python resolves it by scope: local, then enclosing function, then module global, then built-ins.",
+    "example": "total = 0"
+  },
+  {
+    "lexeme": "", "token_type": "NAME", "role": "definition",
+    "title": "Name being defined",
+    "short": "This identifier is the name a def or class statement is creating.",
+    "long": "After this line the name is bound in the surrounding scope and can be referred to elsewhere.",
+    "example": "def greet(...):"
+  },
+  {
+    "lexeme": "", "token_type": "NAME", "role": "parameter",
+    "title": "Parameter name",
+    "short": "A local name that will hold one of the arguments passed when the function is called.",
+    "long": "It exists only inside the function body. A following : gives it a type hint and a following = gives it a default.",
+    "example": "def f(count):"
+  },
+  {
+    "lexeme": "", "token_type": "NAME", "role": "attribute",
+    "title": "Attribute name",
+    "short": "The name looked up on the object to the left of the dot.",
+    "long": "Python searches the instance, then its class, then base classes. If a ( follows, the attribute found is then called.",
+    "example": "text.strip()"
+  },
+  {
+    "lexeme": "", "token_type": "NAME", "role": "call",
+    "title": "Name being called",
+    "short": "The function, method, or class that the parentheses just after it will invoke.",
+    "long": "The name only refers to the callable; it is the following () that runs it.",
+    "example": "len(items)"
+  },
+  {
+    "lexeme": "", "token_type": "OP", "role": "",
+    "title": "Operator or punctuation",
+    "short": "A symbol that combines values or marks the structure of the code.",
+    "long": "CodeCrawler could not pin down a more specific meaning here — often because the surrounding file does not fully parse. Press the ask key for a precise explanation.",
+    "example": ""
+  },
+  {
+    "lexeme": "", "token_type": "STRING", "role": "",
+    "title": "String literal",
+    "short": "A piece of text embedded directly in the source.",
+    "long": "Quote style and prefix (f, r, b) change how it is interpreted. Adjacent literals are auto-joined.",
+    "example": "name = \"ada\""
+  },
+  {
+    "lexeme": "", "token_type": "NUMBER", "role": "",
+    "title": "Numeric literal",
+    "short": "A number written directly in the source — integer, float, or complex.",
+    "long": "The form (0x, 0o, 0b, a decimal point, a trailing j) determines the type and base.",
+    "example": "n = 42"
+  },
+  {
+    "lexeme": "", "token_type": "", "role": "",
+    "title": "Token",
+    "short": "A single unit of Python source with no database entry yet.",
+    "long": "Press the ask key to get an explanation, then save it so it is here next time.",
+    "example": ""
+  }
+]

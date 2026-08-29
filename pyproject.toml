@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codecrawler"
+version = "1.0.0"
+description = "Crawl source code character-by-character or line-by-line with a narrated explanation of every syntax element."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "dbhelix11" }]
+dependencies = []
+
+[project.optional-dependencies]
+ai = ["anthropic>=0.40"]
+textual = ["textual>=0.60"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+codecrawler = "codecrawler.cli:main"
+
+[tool.setuptools]
+packages = ["codecrawler", "codecrawler.languages", "codecrawler.ai", "codecrawler.ui"]
+
+[tool.setuptools.package-data]
+codecrawler = ["seeds/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

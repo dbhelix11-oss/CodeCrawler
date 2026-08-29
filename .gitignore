@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# runtime data (the working database is regenerated from codecrawler/seeds/)
+*.db
+ask.md
+answer.md
