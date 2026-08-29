@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .db import Database, Entry
+from .db import Concept, Database, Entry
 from .languages import Analysis, Analyzer, Token
 
 CHAR = "char"
@@ -29,6 +29,7 @@ class CursorContext:
     token_type: str
     role: str
     note: str
+    concepts: list[str] = field(default_factory=list)  # background-concept slugs
     before: list[str] = field(default_factory=list)
     after: list[str] = field(default_factory=list)
 
@@ -50,6 +51,8 @@ class Explanation:
     source: str = ""
     matched: tuple[str, str, str] | None = None  # (lexeme, token_type, role) that hit
     subject: str = ""  # short label of what is under the cursor
+    concept_slugs: list[str] = field(default_factory=list)
+    concepts: list[Concept] = field(default_factory=list)
 
     @property
     def header(self) -> str:
@@ -80,6 +83,10 @@ class ExplanationEngine:
         token_type = tok.type if tok else ""
         role = tok.role if tok else ""
         note = tok.note if tok else ""
+        if mode == LINE:
+            slugs = list(self.analyzer.line_concepts(source, row))
+        else:
+            slugs = list(tok.concepts) if tok else []
         before = lines[max(0, row - 1 - context_lines) : row - 1]
         after = lines[row : row + context_lines]
         return CursorContext(
@@ -94,6 +101,7 @@ class ExplanationEngine:
             token_type=token_type,
             role=role,
             note=note,
+            concepts=slugs,
             before=before,
             after=after,
         )
@@ -102,8 +110,12 @@ class ExplanationEngine:
 
     def explain(self, ctx: CursorContext, source: str) -> Explanation:
         if ctx.mode == LINE:
-            return self._explain_line(ctx, source)
-        return self._explain_char(ctx)
+            ex = self._explain_line(ctx, source)
+        else:
+            ex = self._explain_char(ctx)
+        ex.concept_slugs = list(ctx.concepts)
+        ex.concepts = self.db.get_concepts(ctx.concepts, ctx.language)
+        return ex
 
     def _subject_for(self, ctx: CursorContext) -> str:
         tok = ctx.token

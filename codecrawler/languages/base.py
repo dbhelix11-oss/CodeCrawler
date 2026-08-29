@@ -26,6 +26,7 @@ class Token:
     lexeme: str = ""  # normalized key for DB lookup (often == string, but not for STRING/NUMBER)
     role: str = ""  # AST-derived disambiguation, e.g. 'call' vs 'tuple' for '('
     note: str = ""  # extra human context, e.g. "the f-string ends here"
+    concepts: tuple[str, ...] = ()  # background-concept slugs this token relates to
 
     def covers(self, row: int, col: int) -> bool:
         return self.start <= (row, col) < self.end
@@ -84,3 +85,7 @@ class Analyzer(abc.ABC):
     @abc.abstractmethod
     def describe_line(self, source: str, lineno: int) -> str:
         """Return a one- or two-sentence plain-English reading of line ``lineno``."""
+
+    def line_concepts(self, source: str, lineno: int) -> list[str]:
+        """Background-concept slugs relevant to the constructs on line ``lineno``."""
+        return []

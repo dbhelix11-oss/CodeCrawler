@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS language (
@@ -51,6 +51,20 @@ CREATE TABLE IF NOT EXISTS note (
     created_at  TEXT NOT NULL
 );
 
+-- Reusable, mostly language-neutral background explanations. A token's analyzer
+-- links it to one or more slugs; higher verbosity levels show these bodies.
+CREATE TABLE IF NOT EXISTS concept (
+    id         INTEGER PRIMARY KEY,
+    slug       TEXT NOT NULL,
+    language   TEXT NOT NULL DEFAULT '',   -- '' = applies to every language
+    title      TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    source     TEXT NOT NULL DEFAULT 'user',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(slug, language)
+);
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -79,6 +93,15 @@ class Entry:
     @property
     def key(self) -> tuple[str, str, str, str]:
         return (self.language, self.lexeme, self.token_type, self.role)
+
+
+@dataclass(frozen=True)
+class Concept:
+    slug: str
+    title: str
+    body: str
+    language: str = ""
+    source: str = "seed"
 
 
 class Database:
@@ -299,12 +322,112 @@ class Database:
                 loaded[language] = self.seed_from_records(language, records)
         return loaded
 
+    # -- concepts ----------------------------------------------------
+
+    def upsert_concept(self, concept: Concept) -> None:
+        now = _now()
+        self.conn.execute(
+            """
+            INSERT INTO concept(slug, language, title, body, source, created_at, updated_at)
+            VALUES (:slug, :language, :title, :body, :source, :now, :now)
+            ON CONFLICT(slug, language) DO UPDATE SET
+                title = excluded.title,
+                body = excluded.body,
+                source = excluded.source,
+                updated_at = excluded.updated_at
+            """,
+            {
+                "slug": concept.slug,
+                "language": concept.language,
+                "title": concept.title,
+                "body": concept.body,
+                "source": concept.source,
+                "now": now,
+            },
+        )
+        self.conn.commit()
+
+    def get_concept(self, slug: str, language: str = "") -> Concept | None:
+        """A language-specific concept overrides the neutral one of the same slug."""
+        for lang in ((language,) if language else ()) + ("",):
+            row = self.conn.execute(
+                "SELECT * FROM concept WHERE slug = ? AND language = ?", (slug, lang)
+            ).fetchone()
+            if row is not None:
+                return Concept(
+                    slug=row["slug"],
+                    title=row["title"],
+                    body=row["body"],
+                    language=row["language"],
+                    source=row["source"],
+                )
+        return None
+
+    def get_concepts(self, slugs, language: str = "") -> list[Concept]:
+        out: list[Concept] = []
+        for slug in slugs:
+            c = self.get_concept(slug, language)
+            if c is not None:
+                out.append(c)
+        return out
+
+    def all_concepts(self) -> list[Concept]:
+        rows = self.conn.execute(
+            "SELECT * FROM concept ORDER BY slug, language"
+        ).fetchall()
+        return [
+            Concept(
+                slug=r["slug"],
+                title=r["title"],
+                body=r["body"],
+                language=r["language"],
+                source=r["source"],
+            )
+            for r in rows
+        ]
+
+    def count_concepts(self) -> int:
+        return int(self.conn.execute("SELECT COUNT(*) AS n FROM concept").fetchone()["n"])
+
+    def seed_concepts_if_empty(self) -> int:
+        if self.count_concepts() > 0:
+            return 0
+        written = 0
+        for rec in iter_bundled_concepts():
+            self.upsert_concept(
+                Concept(
+                    slug=rec["slug"],
+                    title=rec["title"],
+                    body=rec["body"],
+                    language=rec.get("language", ""),
+                    source=rec.get("source", "seed"),
+                )
+            )
+            written += 1
+        return written
+
+    # -- one-call setup -------------------------------------------
+
+    def bootstrap(self) -> dict[str, int]:
+        """Seed entries and concepts for anything not populated yet. Idempotent."""
+        loaded = self.seed_if_empty()
+        n = self.seed_concepts_if_empty()
+        if n:
+            loaded["concepts"] = n
+        return loaded
+
 
 def iter_bundled_seeds():
-    """Yield ``(language, records)`` for each ``codecrawler/seeds/<lang>.json``."""
+    """Yield ``(language, records)`` for each language seed file in ``codecrawler/seeds/``."""
     seed_dir = resources.files("codecrawler").joinpath("seeds")
     for item in seed_dir.iterdir():
-        if item.name.endswith(".json"):
+        if item.name.endswith(".json") and item.name != "concepts.json":
             language = item.name[: -len(".json")]
             records = json.loads(item.read_text(encoding="utf-8"))
             yield language, records
+
+
+def iter_bundled_concepts():
+    """Yield each record from the bundled ``concepts.json``."""
+    path = resources.files("codecrawler").joinpath("seeds", "concepts.json")
+    yield from json.loads(path.read_text(encoding="utf-8"))

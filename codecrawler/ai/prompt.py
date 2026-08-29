@@ -56,11 +56,26 @@ def _caret_line(col: int) -> str:
     return " " * max(0, col) + "^"
 
 
-def build_prompt(ctx: CursorContext) -> AskPrompt:
+_DEPTH_NOTE = {
+    0: "Keep it to a single short sentence.",
+    1: "One or two sentences. Assume general programming knowledge.",
+    2: "A short paragraph: what it is, what it does here, and why it is there.",
+    3: (
+        "The reader is a beginner. Assume almost no prior knowledge and briefly "
+        "define any technical term you use (callable, operand, iterable, "
+        "namespace, binding, expression, statement, ...)."
+    ),
+}
+
+
+def build_prompt(ctx: CursorContext, verbosity: int = 1) -> AskPrompt:
     ctx_before = "\n".join(ctx.before)
     ctx_after = "\n".join(ctx.after)
     lines = []
     lines.append(f"Language: {ctx.language}")
+    lines.append(f"Depth: {_DEPTH_NOTE.get(verbosity, _DEPTH_NOTE[1])}")
+    if ctx.concepts:
+        lines.append("Related concepts: " + ", ".join(ctx.concepts))
     lines.append("")
     lines.append("Context (the marked line is line %d):" % ctx.lineno)
     lines.append("```")

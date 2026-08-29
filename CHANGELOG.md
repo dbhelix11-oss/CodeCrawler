@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.1.0 — 2026-08-29
+
+Explanation depth and a concept library.
+
+- **Verbosity levels** replace the short/full toggle. `Tab` / `Shift-Tab` cycle
+  `0`–`3` (label only → one sentence → why + example + matched entry →
+  + fundamentals). The starting level is `[display] verbosity` in the config and
+  is shown in the status bar (`v0`–`v3`).
+- **Concept library** (`seeds/concepts.json`, 20 language-neutral entries):
+  reusable background explanations — *what a call is*, *arguments vs. parameters*,
+  *blocks and indentation*, *truthiness*, *mutability*, *scope*, and more. A new
+  `concept` table stores them (with an optional per-language override); the
+  Python analyzer maps its tokens and lines to the shared slugs. At verbosity 3
+  the full text shows in line mode; character mode shows a pointer. Missing
+  concepts can be fetched with `?` and saved.
+- **Character-mode cursor fix**: the cursor now visibly moves one character at a
+  time — the reverse-video block is the single character under the cursor, with
+  the surrounding token underlined — instead of jumping token to token.
+- Explanation pane is now scrollable (`J` / `K`, with `▲`/`▼` indicators) so
+  level-3 text fits.
+- `?` prompts adapt to the current verbosity (terser at `0`, "assume no prior
+  knowledge, define your terms" at `3`) and include the linked concept slugs.
+- New: `codecrawler --list-concepts`. `--selftest` now reports concept coverage.
+- Schema bumped to v2; existing databases migrate in place on next run.
+- Tests: 57 cases (was 43).
+
 ## v1.0.0 — 2026-08-29
 
 First public release. Adds `LICENSE` (MIT) and sets the package version to

@@ -33,23 +33,56 @@ def scroll_to_show(target: int, offset: int, height: int, total: int) -> int:
     return max(0, min(offset, max_offset))
 
 
-def explanation_body(explanation, detail: bool, width: int) -> list[str]:
-    """The lines shown in the explanation pane for a resolved Explanation."""
+def explanation_body(explanation, verbosity: int, mode: str, width: int) -> list[str]:
+    """The lines shown in the explanation pane, sized to the verbosity level.
+
+    0 = header only · 1 = + one sentence · 2 = + why/example ·
+    3 = + linked fundamentals (full text in line mode, a pointer in char mode).
+    """
     lines = wrap(explanation.header, width)
+    if verbosity <= 0:
+        return lines
+
     lines.append("")
     lines.extend(wrap(explanation.short, width))
-    if detail:
+
+    if verbosity >= 2:
         if explanation.long:
             lines.append("")
             lines.extend(wrap(explanation.long, width))
         if explanation.example:
             lines.append("")
             lines.extend(wrap("e.g.  " + explanation.example, width))
-    if explanation.matched and explanation.source:
+
+    if verbosity >= 3 and explanation.concept_slugs:
+        if mode == "line":
+            shown = set()
+            for c in explanation.concepts:
+                shown.add(c.slug)
+                lines.append("")
+                rule = "── " + c.title + " "
+                lines.append(rule + "─" * max(0, width - len(rule)))
+                lines.extend(wrap(c.body, width))
+            missing = [s for s in explanation.concept_slugs if s not in shown]
+            if missing:
+                lines.append("")
+                lines.extend(
+                    wrap("(no concept entry yet for: " + ", ".join(missing)
+                         + " — press ? to fetch one)", width)
+                )
+        else:
+            lines.append("")
+            lines.extend(
+                wrap("Fundamentals: " + ", ".join(explanation.concept_slugs)
+                     + "  —  switch to line mode (m) to read them", width)
+            )
+
+    if verbosity >= 2 and explanation.matched and explanation.source:
         lex, tt, role = explanation.matched
-        tag = f"[matched {lex or '*'}/{tt or '*'}/{role or '-'} · {explanation.source}]"
         lines.append("")
-        lines.extend(wrap(tag, width))
+        lines.extend(
+            wrap(f"[matched {lex or '*'}/{tt or '*'}/{role or '-'} · {explanation.source}]", width)
+        )
     return lines
 
 

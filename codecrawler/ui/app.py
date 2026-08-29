@@ -25,8 +25,9 @@ class _State:
     row: int = 1  # 1-based
     col: int = 0  # 0-based
     mode: str = CHAR
-    detail: bool = False
-    scroll: int = 0
+    verbosity: int = 1  # 0..3
+    scroll: int = 0  # code pane scroll (top line index)
+    expl_scroll: int = 0  # explanation pane scroll
     status: str = ""
     pending: object = None  # ParsedAnswer awaiting save, or None
 
@@ -47,7 +48,7 @@ class App:
         self.cfg = cfg
         self.analysis = analyzer.analyze(source)
         lines = source.splitlines() or [""]
-        self.st = _State(lines=lines)
+        self.st = _State(lines=lines, verbosity=cfg.display.verbosity)
         if not self.analysis.ok and self.analysis.error:
             self.st.status = f"note: {self.analysis.error}"
 
@@ -89,8 +90,16 @@ class App:
         else:
             st.col = max(0, min(st.col, max(0, len(line) - 1)))
 
+    _MOVE_ACTIONS = {
+        "move_left", "move_right", "move_up", "move_down", "next_token",
+        "prev_token", "line_start", "line_end", "top", "bottom",
+        "page_up", "page_down",
+    }
+
     def _dispatch(self, action: str | None) -> None:
         st = self.st
+        if action in self._MOVE_ACTIONS:
+            st.expl_scroll = 0
         if action == "move_left":
             self._move_horizontal(-1)
         elif action == "move_right":
@@ -115,11 +124,22 @@ class App:
             st.row -= max(1, self._code_height() - 1)
         elif action == "page_down":
             st.row += max(1, self._code_height() - 1)
+        elif action == "scroll_expl_down":
+            st.expl_scroll += 1
+        elif action == "scroll_expl_up":
+            st.expl_scroll = max(0, st.expl_scroll - 1)
         elif action == "toggle_mode":
             st.mode = LINE if st.mode == CHAR else CHAR
+            st.expl_scroll = 0
             st.status = f"{st.mode} mode"
-        elif action == "toggle_detail":
-            st.detail = not st.detail
+        elif action == "cycle_verbosity":
+            st.verbosity = (st.verbosity + 1) % 4
+            st.expl_scroll = 0
+            st.status = f"verbosity {st.verbosity}"
+        elif action == "cycle_verbosity_back":
+            st.verbosity = (st.verbosity - 1) % 4
+            st.expl_scroll = 0
+            st.status = f"verbosity {st.verbosity}"
         elif action == "ask":
             self._ask()
         elif action == "import_answer":
@@ -181,7 +201,7 @@ class App:
         from ..ai import bridge
 
         ctx = self._context()
-        prompt = build_prompt(ctx)
+        prompt = build_prompt(ctx, self.st.verbosity)
         method = self.cfg.ai.method
         if method == "api":
             from ..ai import api
@@ -312,7 +332,7 @@ class App:
 
         # status line
         mode_tag = "LINE" if st.mode == LINE else "CHAR"
-        head = f" {self.path}  —  line {st.row} col {st.col}  [{mode_tag}]"
+        head = f" {self.path}  —  line {st.row} col {st.col}  [{mode_tag} v{st.verbosity}]"
         self._addstr(0, 0, head.ljust(curses.COLS - 1), curses.A_REVERSE)
 
         tok = self.analysis.token_at(st.row, st.col)
@@ -334,20 +354,27 @@ class App:
 
         # explanation pane
         width = curses.COLS - 4
+        pane_h = EXPLAIN_HEIGHT
         if st.pending is not None:
             body = answer_body(st.pending, width)
         else:
             ctx = self._context()
             explanation = self.engine.explain(ctx, self.source)
-            body = explanation_body(explanation, st.detail, width)
-        for i, line in enumerate(body):
-            if i >= EXPLAIN_HEIGHT:
-                break
+            body = explanation_body(explanation, st.verbosity, ctx.mode, width)
+
+        max_scroll = max(0, len(body) - pane_h)
+        st.expl_scroll = max(0, min(st.expl_scroll, max_scroll))
+        window = body[st.expl_scroll : st.expl_scroll + pane_h]
+        for i, line in enumerate(window):
             self._addstr(sep_y + 1 + i, 2, line)
+        if st.expl_scroll > 0:
+            self._addstr(sep_y + 1, curses.COLS - 3, "▲", curses.A_DIM)
+        if st.expl_scroll < max_scroll:
+            self._addstr(sep_y + pane_h, curses.COLS - 3, "▼", curses.A_DIM)
 
         # help / status line
         hint = (
-            "?:ask  i:import  s/e/d:save  Tab:detail  m:mode  w/b:token  H:help  q:quit"
+            "?:ask i:import s/e/d:save Tab:depth J/K:scroll m:mode w/b:token H:help q:quit"
         )
         bottom = curses.LINES - 1
         self._addstr(bottom, 0, hint[: curses.COLS - 1], curses.A_DIM)
@@ -359,6 +386,9 @@ class App:
         curses.doupdate()
 
     def _highlight(self, y: int, gutter: int, text: str, tok) -> None:
+        """Line mode: reverse the whole line. Char mode: underline the token the
+        cursor is in (so you see the unit being explained) and reverse the one
+        character under the cursor (so you see it crawl)."""
         expanded = text.expandtabs(4)
         if self.st.mode == LINE:
             self._addstr(y, gutter, expanded, curses.A_REVERSE)
@@ -368,12 +398,11 @@ class App:
             end_col = tok.end[1] if tok.end[0] == self.st.row else len(text)
             seg = text[start_col:end_col].expandtabs(4) or " "
             x = gutter + len(text[:start_col].expandtabs(4))
-            self._addstr(y, x, seg, curses.A_REVERSE)
-        else:
-            col = self.st.col
-            ch = text[col] if col < len(text) else " "
-            x = gutter + len(text[:col].expandtabs(4))
-            self._addstr(y, x, ch or " ", curses.A_REVERSE)
+            self._addstr(y, x, seg, curses.A_UNDERLINE)
+        col = self.st.col
+        ch = text[col] if col < len(text) else " "
+        xc = gutter + len(text[:col].expandtabs(4))
+        self._addstr(y, xc, ch or " ", curses.A_REVERSE)
 
 
 def run(path: Path, source: str, analyzer: Analyzer, db: Database, cfg: Config) -> None:

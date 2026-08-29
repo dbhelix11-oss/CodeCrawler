@@ -26,7 +26,13 @@ _DEFAULTS: dict[str, dict[str, object]] = {
         "max_tokens": 1500,
         "context_lines": 3,
     },
+    "display": {
+        "verbosity": 1,  # 0 label only · 1 one sentence · 2 + why/example · 3 + fundamentals
+    },
 }
+
+VERBOSITY_MIN = 0
+VERBOSITY_MAX = 3
 
 _TEMPLATE = """\
 # CodeCrawler configuration.
@@ -48,6 +54,14 @@ model = "claude-opus-5"
 max_tokens = 1500
 # Lines of surrounding code sent as context when asking.
 context_lines = 3
+
+[display]
+# Starting explanation depth, cycled at runtime with Tab:
+#   0  just the label
+#   1  one sentence
+#   2  sentence + why it is there + an example
+#   3  everything above + linked language fundamentals (full text in line mode)
+verbosity = 1
 """
 
 
@@ -66,9 +80,15 @@ class AIConfig:
 
 
 @dataclass(frozen=True)
+class DisplayConfig:
+    verbosity: int
+
+
+@dataclass(frozen=True)
 class Config:
     general: GeneralConfig
     ai: AIConfig
+    display: DisplayConfig
     path: Path = field(default=DEFAULT_CONFIG_PATH)
 
     @property
@@ -120,7 +140,10 @@ def load(path: Path | str | None = None) -> Config:
         max_tokens=int(merged["ai"]["max_tokens"]),
         context_lines=int(merged["ai"]["context_lines"]),
     )
-    return Config(general=general, ai=ai, path=cfg_path)
+    verbosity = int(merged["display"]["verbosity"])
+    verbosity = max(VERBOSITY_MIN, min(VERBOSITY_MAX, verbosity))
+    display = DisplayConfig(verbosity=verbosity)
+    return Config(general=general, ai=ai, display=display, path=cfg_path)
 
 
 def ensure_file(path: Path | str | None = None) -> Path:

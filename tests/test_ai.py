@@ -27,6 +27,15 @@ def test_build_prompt_line_mode(engine, analyzer, sample_source):
     assert "whole of line" in p.user
 
 
+def test_build_prompt_verbosity_and_concepts(engine, analyzer, sample_source):
+    ctx = _ctx(engine, analyzer, sample_source, "print(greet(", "(")
+    terse = build_prompt(ctx, verbosity=0).user
+    deep = build_prompt(ctx, verbosity=3).user
+    assert "single short sentence" in terse
+    assert "beginner" in deep and "define any technical term" in deep
+    assert "Related concepts: function-call" in deep
+
+
 def test_parse_answer_template():
     text = (
         "TITLE: Call parentheses\n"

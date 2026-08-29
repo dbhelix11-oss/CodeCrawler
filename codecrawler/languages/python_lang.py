@@ -122,6 +122,7 @@ class PythonAnalyzer(Analyzer):
                     lexeme=lexeme,
                     role=role,
                     note=note,
+                    concepts=tuple(_concepts_for(lexeme, r.type, role)),
                 )
             )
         return Analysis(
@@ -169,6 +170,36 @@ class PythonAnalyzer(Analyzer):
                 f"line {enclosing.lineno}: `{self._short(enclosing)}`."
             )
         return f"`{stripped}`."
+
+    def line_concepts(self, source: str, lineno: int) -> list[str]:
+        lines = source.splitlines()
+        if lineno < 1 or lineno > len(lines):
+            return []
+        stripped = lines[lineno - 1].strip()
+        if stripped.startswith("@"):
+            return ["decorator", "definition-vs-execution"]
+        if stripped.startswith(("try:", "except", "finally:")):
+            return ["exceptions-and-flow", "block-and-indentation"]
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return []
+        stmt = self._smallest_stmt_on_line(tree, lineno) or self._enclosing_stmt(tree, lineno)
+        if stmt is None:
+            return []
+        slugs: list[str] = list(_LINE_CONCEPTS.get(type(stmt).__name__, []))
+        # only look at expression nodes that actually sit on this line, so a
+        # `class`/`def` header does not inherit concepts from its whole body
+        for node in ast.walk(stmt):
+            if getattr(node, "lineno", None) == lineno:
+                slugs += _LINE_CONCEPTS_EXPR.get(type(node).__name__, [])
+        seen: set[str] = set()
+        ordered = []
+        for s in slugs:
+            if s not in seen:
+                seen.add(s)
+                ordered.append(s)
+        return ordered[:4]
 
     # -- lexing --------------------------------------------------------
 
@@ -901,4 +932,150 @@ _BARE_HEADERS = {
     "else:": "The fallback block, run when the conditions above were all false (or, after a loop, when it finished without break).",
     "try:": "Begins a try block; exceptions raised inside are handled by the except clause(s) below.",
     "finally:": "Cleanup block that always runs when leaving the try above — normally, via exception, or via return.",
+}
+
+
+# --------------------------------------------------------------------------
+# token -> background-concept slugs
+# --------------------------------------------------------------------------
+
+# keyed by role (checked first), then by lexeme, then by token type
+_CONCEPTS_BY_ROLE = {
+    "call": ["function-call", "argument-vs-parameter"],
+    "func-def-params": ["argument-vs-parameter", "definition-vs-execution"],
+    "class-bases": ["definition-vs-execution"],
+    "tuple": ["collection-literals"],
+    "generator": ["comprehension", "iteration-and-iterables"],
+    "group": ["operator-and-operand", "expression-vs-statement"],
+    "list": ["collection-literals"],
+    "set": ["collection-literals"],
+    "dict": ["collection-literals"],
+    "subscript": ["collection-literals", "attribute-access"],
+    "list-comp": ["comprehension", "iteration-and-iterables"],
+    "dict-comp": ["comprehension", "iteration-and-iterables"],
+    "set-comp": ["comprehension", "iteration-and-iterables"],
+    "fstring-field": ["string-literals", "expression-vs-statement"],
+    "attribute": ["attribute-access"],
+    "assign": ["binding"],
+    "annotated-assign": ["binding"],
+    "annotation": ["binding"],
+    "kwarg": ["argument-vs-parameter"],
+    "param-default": ["argument-vs-parameter"],
+    "aug-assign": ["binding", "mutability", "operator-and-operand"],
+    "block": ["block-and-indentation"],
+    "slice": ["collection-literals"],
+    "dict-pair": ["collection-literals"],
+    "arithmetic": ["operator-and-operand"],
+    "bitwise": ["operator-and-operand"],
+    "unary": ["operator-and-operand"],
+    "comparison": ["comparison-and-chaining", "operator-and-operand"],
+    "matmul": ["operator-and-operand"],
+    "membership": ["operator-and-operand", "iteration-and-iterables"],
+    "for-clause": ["iteration-and-iterables", "block-and-indentation"],
+    "ternary": ["expression-vs-statement", "truthiness"],
+    "statement": ["truthiness", "block-and-indentation"],
+    "comp-filter": ["comprehension", "truthiness"],
+    "decorator": ["decorator"],
+    "return-annotation": ["binding", "definition-vs-execution"],
+    "unpack": ["argument-vs-parameter", "collection-literals"],
+    "var-positional": ["argument-vs-parameter"],
+    "var-keyword": ["argument-vs-parameter"],
+    "kwonly-marker": ["argument-vs-parameter"],
+    "definition": ["definition-vs-execution"],
+    "parameter": ["argument-vs-parameter"],
+}
+
+_CONCEPTS_BY_LEXEME = {
+    "and": ["truthiness", "operator-and-operand"],
+    "or": ["truthiness", "operator-and-operand"],
+    "not": ["truthiness", "operator-and-operand"],
+    "is": ["none-and-absence", "comparison-and-chaining"],
+    "if": ["truthiness", "block-and-indentation"],
+    "elif": ["truthiness", "block-and-indentation"],
+    "else": ["truthiness", "block-and-indentation"],
+    "for": ["iteration-and-iterables", "block-and-indentation"],
+    "while": ["iteration-and-iterables", "truthiness", "block-and-indentation"],
+    "def": ["definition-vs-execution", "argument-vs-parameter", "block-and-indentation"],
+    "class": ["definition-vs-execution", "block-and-indentation"],
+    "lambda": ["function-call", "definition-vs-execution"],
+    "return": ["function-call"],
+    "yield": ["function-call", "iteration-and-iterables"],
+    "import": ["scope-and-namespaces"],
+    "from": ["scope-and-namespaces"],
+    "global": ["scope-and-namespaces"],
+    "nonlocal": ["scope-and-namespaces"],
+    "try": ["exceptions-and-flow", "block-and-indentation"],
+    "except": ["exceptions-and-flow"],
+    "finally": ["exceptions-and-flow"],
+    "raise": ["exceptions-and-flow"],
+    "assert": ["exceptions-and-flow"],
+    "with": ["block-and-indentation", "exceptions-and-flow"],
+    "None": ["none-and-absence"],
+    "True": ["truthiness"],
+    "False": ["truthiness"],
+    ":=": ["binding", "expression-vs-statement"],
+    "=": ["binding"],
+    ".": ["attribute-access"],
+    "#": ["comment-and-docstring"],
+    '"""': ["string-literals", "comment-and-docstring"],
+}
+
+_CONCEPTS_BY_TYPE = {
+    "STRING": ["string-literals"],
+    "COMMENT": ["comment-and-docstring"],
+    "INDENT": ["block-and-indentation"],
+    "DEDENT": ["block-and-indentation"],
+}
+
+
+def _concepts_for(lexeme: str, ttype: str, role: str) -> list[str]:
+    slugs: list[str] = []
+    slugs += _CONCEPTS_BY_ROLE.get(role, [])
+    slugs += _CONCEPTS_BY_LEXEME.get(lexeme, [])
+    if not slugs:
+        slugs += _CONCEPTS_BY_TYPE.get(ttype, [])
+    seen: set[str] = set()
+    ordered = []
+    for s in slugs:
+        if s not in seen:
+            seen.add(s)
+            ordered.append(s)
+    return ordered
+
+
+_LINE_CONCEPTS = {
+    "Assign": ["binding"],
+    "AnnAssign": ["binding"],
+    "AugAssign": ["binding", "mutability"],
+    "FunctionDef": ["definition-vs-execution", "argument-vs-parameter", "block-and-indentation"],
+    "AsyncFunctionDef": ["definition-vs-execution", "argument-vs-parameter", "block-and-indentation"],
+    "ClassDef": ["definition-vs-execution", "block-and-indentation"],
+    "Return": ["function-call"],
+    "If": ["truthiness", "block-and-indentation"],
+    "For": ["iteration-and-iterables", "block-and-indentation"],
+    "AsyncFor": ["iteration-and-iterables", "block-and-indentation"],
+    "While": ["iteration-and-iterables", "truthiness", "block-and-indentation"],
+    "With": ["block-and-indentation", "exceptions-and-flow"],
+    "AsyncWith": ["block-and-indentation", "exceptions-and-flow"],
+    "Try": ["exceptions-and-flow", "block-and-indentation"],
+    "Raise": ["exceptions-and-flow"],
+    "Assert": ["exceptions-and-flow"],
+    "Import": ["scope-and-namespaces"],
+    "ImportFrom": ["scope-and-namespaces"],
+    "Global": ["scope-and-namespaces"],
+    "Nonlocal": ["scope-and-namespaces"],
+}
+
+_LINE_CONCEPTS_EXPR = {
+    "Call": ["function-call", "argument-vs-parameter"],
+    "ListComp": ["comprehension", "iteration-and-iterables"],
+    "SetComp": ["comprehension", "iteration-and-iterables"],
+    "DictComp": ["comprehension", "iteration-and-iterables"],
+    "GeneratorExp": ["comprehension", "iteration-and-iterables"],
+    "Lambda": ["function-call", "definition-vs-execution"],
+    "BoolOp": ["truthiness", "operator-and-operand"],
+    "Compare": ["comparison-and-chaining"],
+    "BinOp": ["operator-and-operand"],
+    "Attribute": ["attribute-access"],
+    "ListLit": ["collection-literals"],
 }

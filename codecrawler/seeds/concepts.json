@@ -1,0 +1,142 @@
+[
+  {
+    "slug": "definition-vs-execution",
+    "language": "",
+    "title": "Defining vs. running",
+    "body": "Writing a `def` or `class` does not run the code inside it. It only builds the function or class and attaches a name to it. The indented body is stored for later: a function's body runs each time the function is called; a class body runs once, right where it is written, to construct the class.\n\nThis is why a function can call another function that is defined lower in the file, as long as the call happens after both definitions have run. It is also why a typo inside a function is caught right away (the file is still parsed) while a wrong idea inside it can stay hidden until something finally calls it.",
+    "source": "seed"
+  },
+  {
+    "slug": "expression-vs-statement",
+    "language": "",
+    "title": "Expressions vs. statements",
+    "body": "An expression is any fragment of code that produces a value: `2 + 2`, `name.upper()`, `x > 0`. You can drop an expression anywhere a value is expected — inside a call, on the right of `=`, as a list item.\n\nA statement is a complete instruction that does something: an assignment, an `if`, a `return`, a `for` loop. It does not hand back a value you can pass around. Rough test: if it would make sense to print it, it is probably an expression; if it steers what the program does next, it is a statement.",
+    "source": "seed"
+  },
+  {
+    "slug": "binding",
+    "language": "",
+    "title": "Names point at values",
+    "body": "`=` does not copy a value into a box. It points a name at a value that already exists. `x = [1, 2]` builds a list, then aims the name `x` at it. `y = x` aims a second name at the very same list, so a change made through `y` is visible through `x`.\n\nRe-assigning (`x = 5`) simply moves the name onto a different value; it does not disturb the old one. A value that no name points at any more is eventually thrown away.",
+    "source": "seed"
+  },
+  {
+    "slug": "function-call",
+    "language": "",
+    "title": "What a call is",
+    "body": "A function has two parts you write separately: the name, which refers to it, and the parentheses `()`, which actually run it. `len` by itself is just the function; `len(items)` runs it and yields a result.\n\nWhatever sits between the parentheses are the arguments — the inputs for this one run. Empty parentheses still call the function, with no arguments. The whole call evaluates to whatever the function hands back (its return value), which you can then assign, print, or feed into another call.",
+    "source": "seed"
+  },
+  {
+    "slug": "argument-vs-parameter",
+    "language": "",
+    "title": "Arguments vs. parameters",
+    "body": "Parameters are the placeholder names in a function's definition: `def greet(name, loud)` has parameters `name` and `loud`.\n\nArguments are the real values handed over at a call: `greet(\"Sam\", True)` passes the arguments `\"Sam\"` and `True`. Positional arguments line up with parameters by order; keyword arguments (`loud=True`) line up by name and may be given in any order. A parameter with a default (`loud=False`) can be omitted by the caller.",
+    "source": "seed"
+  },
+  {
+    "slug": "block-and-indentation",
+    "language": "",
+    "title": "Blocks and indentation",
+    "body": "A block is a run of statements that belong together — the body of an `if`, a loop, or a function. In Python the block is marked only by indentation: lines indented one step past the header line are inside it, and the block ends where the indentation steps back out.\n\nOther languages fence the same idea with braces `{ }`. The `:` at the end of a Python header line announces that an indented block follows. Mixing tabs and spaces within one block is an error.",
+    "source": "seed"
+  },
+  {
+    "slug": "operator-and-operand",
+    "language": "",
+    "title": "Operators and operands",
+    "body": "An operator is a symbol that combines values: `+`, `*`, `==`, `and`. The values it acts on are its operands — in `a + b`, the operands are `a` and `b`.\n\nWhen operators pile up, precedence fixes the order: `*` binds tighter than `+`, so `2 + 3 * 4` is `2 + 12`. Parentheses override that. Most operators are really a readable spelling of a method the objects define, which is why `+` can mean numeric addition for numbers and joining for strings.",
+    "source": "seed"
+  },
+  {
+    "slug": "attribute-access",
+    "language": "",
+    "title": "The dot: reaching into an object",
+    "body": "The dot in `text.upper` means: on the object `text`, find something named `upper`. That something may be stored data (an attribute) or a function tied to the object (a method).\n\nThe search is not limited to the object itself — Python also checks the object's type and every type it inherits from. Access on its own runs nothing: `text.upper` is the method; `text.upper()` calls it.",
+    "source": "seed"
+  },
+  {
+    "slug": "iteration-and-iterables",
+    "language": "",
+    "title": "Iterating over things",
+    "body": "To iterate is to take one item at a time from a collection until it is exhausted. A `for` loop does exactly this: `for c in word` runs its body once per character.\n\nAnything you can loop over is an iterable — lists, strings, dictionaries (which yield their keys), files (which yield lines), ranges. Some iterables, such as a file or a generator, can only be walked once. `for` handles asking for the next item and stopping at the end.",
+    "source": "seed"
+  },
+  {
+    "slug": "truthiness",
+    "language": "",
+    "title": "Truthy and falsy values",
+    "body": "A condition does not have to be exactly `True` or `False`. Python reads many values as truthy or falsy. Falsy: `False`, `None`, `0`, `0.0`, `\"\"`, `[]`, `{}`, and other empty collections. Almost everything else is truthy.\n\nSo `if items:` means 'if the list holds anything', and `if not name:` means 'if the name is empty'. `and` / `or` follow the same rules and return one of their operands rather than a strict boolean: `name or \"guest\"` gives `name` when it is non-empty, otherwise `\"guest\"`.",
+    "source": "seed"
+  },
+  {
+    "slug": "scope-and-namespaces",
+    "language": "",
+    "title": "Scope: where a name is visible",
+    "body": "A namespace is the set of names that currently mean something. Every function call gets a fresh one. When code uses a name, Python looks first in the local function, then in any enclosing function, then at module (global) level, then in the built-ins.\n\nAssigning to a name inside a function makes it local by default, even when a global of the same name exists. `global` and `nonlocal` are how you deliberately reach out and rebind an outer name instead.",
+    "source": "seed"
+  },
+  {
+    "slug": "mutability",
+    "language": "",
+    "title": "Mutable vs. immutable values",
+    "body": "A value is mutable if it can be changed in place and immutable if it cannot. Lists, dicts, and sets are mutable; numbers, strings, and tuples are immutable.\n\nThis matters whenever two names point at the same value: a change made through one name is seen through the other. It is also why `x += 1` on a number produces a new number while `lst += [item]` edits the existing list. A mutable default argument is a well-known trap, because it is created once and then shared by every call.",
+    "source": "seed"
+  },
+  {
+    "slug": "comprehension",
+    "language": "",
+    "title": "Comprehensions",
+    "body": "A comprehension builds a collection with a loop written inline. `[n * n for n in range(5)]` reads as 'n times n, for each n in 0..4' and produces `[0, 1, 4, 9, 16]`.\n\nThe order is: output expression, then `for`, then an optional `if` filter. Square brackets make a list, braces make a set or (with `key: value`) a dict, parentheses make a lazy generator. It is shorter than the same loop written with `.append`, and usually clearer once the shape is familiar.",
+    "source": "seed"
+  },
+  {
+    "slug": "comparison-and-chaining",
+    "language": "",
+    "title": "Comparisons",
+    "body": "Comparison operators (`<`, `>`, `==`, `!=`, `<=`, `>=`) produce a boolean: `3 < 5` is `True`. `==` compares values; `is` compares identity — whether it is literally the same object — and is normally used only with `None`.\n\nComparisons chain: `0 <= i < len(xs)` means `0 <= i and i < len(xs)`, with `i` evaluated once. This matches ordinary mathematical notation.",
+    "source": "seed"
+  },
+  {
+    "slug": "collection-literals",
+    "language": "",
+    "title": "List, tuple, dict, set",
+    "body": "Python has four built-in collections, each with its own brackets. A list `[1, 2, 3]` is an ordered, changeable sequence. A tuple `(1, 2, 3)` is an ordered sequence that cannot change. A dict `{\"a\": 1}` maps keys to values for fast lookup by key. A set `{1, 2, 3}` is an unordered bag of unique values.\n\nPick by need: order plus edits → list; a fixed record → tuple; lookup by name → dict; membership tests and de-duplication → set. `{}` on its own is an empty dict; use `set()` for an empty set.",
+    "source": "seed"
+  },
+  {
+    "slug": "string-literals",
+    "language": "",
+    "title": "String literals",
+    "body": "A string is text between quotes; single and double quotes behave identically. A backslash begins an escape, so `\\n` is a newline and `\\\"` is a literal quote. Triple quotes `\"\"\"...\"\"\"` may span several lines.\n\nA letter immediately before the opening quote changes how the text is read: `f\"...\"` evaluates the `{ }` fields inside it, `r\"...\"` switches off backslash escapes (useful for regexes and Windows paths), and `b\"...\"` produces raw bytes instead of text.",
+    "source": "seed"
+  },
+  {
+    "slug": "none-and-absence",
+    "language": "",
+    "title": "None: the absence of a value",
+    "body": "`None` is one special object meaning 'nothing here'. A function that does not explicitly return anything returns `None`. It is often used as a default that the body then replaces: `def f(items=None): items = items or []`.\n\nTest for it with `is None` / `is not None`, not `== None`, because `is` checks for that exact object. `None` is falsy, so `if result:` also skips it — but that skips `0` and `\"\"` too, so be explicit when the difference matters.",
+    "source": "seed"
+  },
+  {
+    "slug": "exceptions-and-flow",
+    "language": "",
+    "title": "Exceptions and control flow",
+    "body": "When something goes wrong, Python raises an exception: it abandons the current line and jumps outward through the callers looking for a handler. If none is found the program stops and prints a traceback.\n\n`try:` marks code to watch; `except SomeError:` catches a matching failure so you can respond; `else:` runs when nothing was raised; `finally:` always runs, for cleanup. Catching errors you cannot really handle just hides bugs, so keep `try` blocks small and specific.",
+    "source": "seed"
+  },
+  {
+    "slug": "decorator",
+    "language": "",
+    "title": "Decorators",
+    "body": "A decorator is a function that takes another function (or class) and returns a replacement — usually one that wraps extra behaviour around the original. Writing `@timer` on the line above `def work():` is shorthand for `work = timer(work)`.\n\nTypical uses: caching results, registering the function somewhere, checking permissions, logging. Stacked decorators apply from the bottom up. The original function is still there; it has just been wrapped.",
+    "source": "seed"
+  },
+  {
+    "slug": "comment-and-docstring",
+    "language": "",
+    "title": "Comments and docstrings",
+    "body": "A comment starts with `#` and runs to the end of the line. Python ignores it entirely; it is a note for people. There is no block-comment syntax — every line needs its own `#`.\n\nA docstring is different: a string literal placed as the very first line inside a module, function, or class body. It is not ignored — it is attached to that object as its documentation and shown by `help()`. By convention it is triple-quoted.",
+    "source": "seed"
+  }
+]

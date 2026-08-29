@@ -35,15 +35,38 @@ First run creates `~/.config/codecrawler/config.toml` and seeds the database at
 | `w` / `b` | jump to next / previous token |
 | `0` / `$`, `g` / `G` | line start/end, file top/bottom |
 | `m` | toggle **character** ⇄ **line** mode |
-| `Tab` | toggle short / full explanation |
+| `Tab` / `Shift-Tab` | cycle explanation depth `0`–`3` (see below) |
+| `J` / `K` | scroll the explanation pane when it overflows (`▲`/`▼` show more) |
 | `?` | ask Claude about what's under the cursor |
 | `i` | import a pasted answer (bridge mode) |
 | `s` / `e` / `d` | save / edit-then-save / discard a fetched answer |
 | `H` | help  · `q` quit |
 
-In **character mode** the explanation comes from the database (with a fallback
-chain from the most specific `lexeme + type + role` down to a generic entry). In
-**line mode** it is generated offline from the parsed syntax tree.
+In **character mode** the reverse-video block is the single character under the
+cursor; the underline marks the whole token it belongs to (the unit being
+explained). The explanation comes from the database, with a fallback chain from
+the most specific `lexeme + type + role` down to a generic entry. In **line
+mode** the whole line is highlighted and the explanation is generated offline
+from the parsed syntax tree.
+
+### Verbosity (`Tab`)
+
+`Tab` cycles a depth level, shown in the status bar as `v0`–`v3` and remembered
+in the config (`[display] verbosity`):
+
+| level | shows |
+| --- | --- |
+| `0` | just the label |
+| `1` | one sentence |
+| `2` | + why it's there + an example + which database entry matched |
+| `3` | + linked **fundamentals** — in line mode the full concept text; in character mode a pointer listing them (switch to line mode to read) |
+
+The fundamentals come from a small, mostly language-neutral **concept library**
+(`seeds/concepts.json`, ~20 entries: *what a call is*, *arguments vs.
+parameters*, *blocks and indentation*, *truthiness*, *mutability*, …). Each
+language's analyzer links its tokens and lines to these shared slugs, so the same
+concepts are reused when more languages are added. Missing concepts can be
+fetched with `?` and saved like any other entry.
 
 ### Asking Claude (`?`)
 
@@ -64,7 +87,8 @@ free-form notes.
 
 ```sh
 codecrawler --dump-db python          # print every entry for a language
-codecrawler --selftest samples/hello.py   # headless: token count, role coverage, line readings
+codecrawler --list-concepts           # print the background-concept library
+codecrawler --selftest samples/hello.py   # headless: token/role/concept coverage, line readings
 codecrawler --lang python path/to/file    # force a language
 codecrawler --ai api path/to/file         # override the AI method for one run
 ```
@@ -80,7 +104,8 @@ codecrawler/
   languages/        base.py (Analyzer ABC + Token) and python_lang.py (tokenize + ast)
   ai/               prompt.py (shared), bridge.py (copy/paste), api.py (Anthropic SDK)
   ui/               curses app — all terminal code is confined here
-  seeds/python.json the starter database
+  seeds/python.json   the starter token database
+  seeds/concepts.json the language-neutral concept library
 tests/              pytest suite
 samples/hello.py    a file to crawl
 ```
