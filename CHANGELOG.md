@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.1 — 2026-08-29
+
+Navigation cleanup.
+
+- `PgDn` / `PgUp` now scroll only the explanation pane (one page). They no
+  longer move the cursor through the code.
+- `g` opens a `go to line:` prompt (type a number, Enter jumps there, Esc
+  cancels) — the way to move quickly through a large file now that PgUp/PgDn
+  are explanation-only. `G` still jumps to the last line.
+- Removed the page-jump-through-code binding and the `g`/`G` = top/bottom
+  behaviour it replaced.
+
 ## v1.1.0 — 2026-08-29
 
 Explanation depth and a concept library.

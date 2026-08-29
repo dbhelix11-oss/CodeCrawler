@@ -33,10 +33,12 @@ First run creates `~/.config/codecrawler/config.toml` and seeds the database at
 | --- | --- |
 | `h j k l` / arrows | move the cursor (char mode) or move by line (line mode) |
 | `w` / `b` | jump to next / previous token |
-| `0` / `$`, `g` / `G` | line start/end, file top/bottom |
+| `0` / `$` | start / end of line |
+| `g` / `G` | go to a line number (prompts) / jump to the last line |
 | `m` | toggle **character** ⇄ **line** mode |
 | `Tab` / `Shift-Tab` | cycle explanation depth `0`–`3` (see below) |
-| `J` / `K` | scroll the explanation pane when it overflows (`▲`/`▼` show more) |
+| `J` / `K` | scroll the explanation pane one line (`▲`/`▼` show more) |
+| `PgDn` / `PgUp` | scroll the explanation pane one page |
 | `?` | ask Claude about what's under the cursor |
 | `i` | import a pasted answer (bridge mode) |
 | `s` / `e` / `d` | save / edit-then-save / discard a fetched answer |

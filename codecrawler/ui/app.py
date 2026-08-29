@@ -92,8 +92,7 @@ class App:
 
     _MOVE_ACTIONS = {
         "move_left", "move_right", "move_up", "move_down", "next_token",
-        "prev_token", "line_start", "line_end", "top", "bottom",
-        "page_up", "page_down",
+        "prev_token", "line_start", "line_end", "bottom", "goto_line",
     }
 
     def _dispatch(self, action: str | None) -> None:
@@ -116,18 +115,18 @@ class App:
             st.col = 0
         elif action == "line_end":
             st.col = max(0, len(self._cur_line()) - 1)
-        elif action == "top":
-            st.row, st.col = 1, 0
         elif action == "bottom":
             st.row, st.col = len(st.lines), 0
-        elif action == "page_up":
-            st.row -= max(1, self._code_height() - 1)
-        elif action == "page_down":
-            st.row += max(1, self._code_height() - 1)
+        elif action == "goto_line":
+            self._goto_line()
         elif action == "scroll_expl_down":
             st.expl_scroll += 1
         elif action == "scroll_expl_up":
             st.expl_scroll = max(0, st.expl_scroll - 1)
+        elif action == "scroll_expl_page_down":
+            st.expl_scroll += max(1, EXPLAIN_HEIGHT - 1)
+        elif action == "scroll_expl_page_up":
+            st.expl_scroll = max(0, st.expl_scroll - max(1, EXPLAIN_HEIGHT - 1))
         elif action == "toggle_mode":
             st.mode = LINE if st.mode == CHAR else CHAR
             st.expl_scroll = 0
@@ -183,6 +182,40 @@ class App:
                     break
                 prev = t
             self.st.row, self.st.col = prev.start
+
+    def _goto_line(self) -> None:
+        raw = self._prompt(f"go to line (1-{len(self.st.lines)}): ")
+        if not raw:
+            return
+        try:
+            n = int(raw)
+        except ValueError:
+            self.st.status = f"not a line number: {raw!r}"
+            return
+        n = max(1, min(n, len(self.st.lines)))
+        self.st.row, self.st.col = n, 0
+        self.st.expl_scroll = 0
+        self.st.status = f"line {n}"
+
+    def _prompt(self, label: str) -> str | None:
+        """Modal one-line text entry in the bottom bar. Enter confirms, Esc cancels."""
+        buf = ""
+        bottom = curses.LINES - 1
+        while True:
+            self._render()
+            field = f" {label}{buf}█ "
+            self._addstr(bottom, 0, field.ljust(curses.COLS - 1), curses.A_REVERSE)
+            self.stdscr.noutrefresh()
+            curses.doupdate()
+            k = self.stdscr.getch()
+            if k == 27:  # Esc
+                return None
+            if k in (10, 13, curses.KEY_ENTER):
+                return buf
+            if k in (curses.KEY_BACKSPACE, 127, 8):
+                buf = buf[:-1]
+            elif 0 <= k < 256 and chr(k).isdigit():
+                buf += chr(k)
 
     # -- ask / import / save -------------------------------------
 
@@ -374,7 +407,7 @@ class App:
 
         # help / status line
         hint = (
-            "?:ask i:import s/e/d:save Tab:depth J/K:scroll m:mode w/b:token H:help q:quit"
+            "?:ask g:goto Tab:depth J/K/PgDn/PgUp:scroll m:mode w/b:token s/e/d:save H:help q:quit"
         )
         bottom = curses.LINES - 1
         self._addstr(bottom, 0, hint[: curses.COLS - 1], curses.A_DIM)
