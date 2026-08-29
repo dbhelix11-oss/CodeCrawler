@@ -417,11 +417,15 @@ class Database:
         return loaded
 
 
+# Bundled JSON files under seeds/ that are not per-language token seeds.
+_NON_SEED_JSON = {"concepts.json", "python_stdlib.json"}
+
+
 def iter_bundled_seeds():
     """Yield ``(language, records)`` for each language seed file in ``codecrawler/seeds/``."""
     seed_dir = resources.files("codecrawler").joinpath("seeds")
     for item in seed_dir.iterdir():
-        if item.name.endswith(".json") and item.name != "concepts.json":
+        if item.name.endswith(".json") and item.name not in _NON_SEED_JSON:
             language = item.name[: -len(".json")]
             records = json.loads(item.read_text(encoding="utf-8"))
             yield language, records

@@ -5,4 +5,4 @@ plain-English explanation of the syntax element under the cursor: what it is,
 what it does *here*, and why it is there.
 """
 
-__version__ = "1.1.1"
+__version__ = "1.3.0"

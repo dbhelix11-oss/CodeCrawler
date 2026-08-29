@@ -41,6 +41,18 @@ class CursorContext:
 
 
 @dataclass
+class SiblingList:
+    """The "namespace" panel: what else lives beside the name under the cursor."""
+
+    owner: str  # "math", "self → Circle", …
+    tier: int  # 0 untrusted · 1 in-file · 2 stdlib data · 3 source read · 4 import
+    trusted: bool
+    names: list[str] = field(default_factory=list)  # display-ordered, capped
+    total: int = 0  # full count before the cap
+    hint: str = ""  # e.g. how to see more, or a re-confirm nudge
+
+
+@dataclass
 class Explanation:
     mode: str
     found: bool
@@ -53,6 +65,7 @@ class Explanation:
     subject: str = ""  # short label of what is under the cursor
     concept_slugs: list[str] = field(default_factory=list)
     concepts: list[Concept] = field(default_factory=list)
+    siblings: "SiblingList | None" = None
 
     @property
     def header(self) -> str:

@@ -7,12 +7,15 @@ from __future__ import annotations
 
 import ast
 import io
+import json
 import keyword
+import sys
 import token as _token
 import tokenize
 from dataclasses import dataclass
+from importlib.resources import files as _res_files
 
-from .base import Analysis, Analyzer, Pos, Token
+from .base import Analysis, Analyzer, Member, NamespaceRef, Pos, Token
 
 # ---------------------------------------------------------------------------
 # operator-class -> (lexeme, role) tables
@@ -109,6 +112,13 @@ class PythonAnalyzer(Analyzer):
         self._tag_fstring_fields(raw, roles)
         self._tag_decorators(raw, roles)
 
+        refs: dict[Pos, str] = {}
+        if tree is not None:
+            try:
+                self._tag_module_refs(tree, raw, refs)
+            except Exception:  # ref tagging is best-effort
+                refs = {}
+
         tokens: list[Token] = []
         for r in raw:
             lexeme, role, note = self._key_for(r, roles)
@@ -123,11 +133,234 @@ class PythonAnalyzer(Analyzer):
                     role=role,
                     note=note,
                     concepts=tuple(_concepts_for(lexeme, r.type, role)),
+                    ref=refs.get(r.start, ""),
                 )
             )
         return Analysis(
             language=self.name, source=source, tokens=tokens, ok=ok, error=error
         )
+
+    # -- namespaces / imports -------------------------------------
+
+    @staticmethod
+    def is_stdlib(module: str) -> bool:
+        return module.split(".")[0] in sys.stdlib_module_names
+
+    def module_members(self, module: str) -> list[Member] | None:
+        data = _stdlib_data().get(module)
+        if data is None:
+            return None
+        return [
+            Member(name=n, blurb=b)
+            for n, b in sorted(data.items(), key=lambda kv: kv[0].lower())
+        ]
+
+    @staticmethod
+    def _module_bindings(tree: ast.AST) -> tuple[dict[str, str], dict[str, str]]:
+        """``({local_name: dotted_module}, {imported_name: source_module})``."""
+        bound: dict[str, str] = {}
+        from_map: dict[str, str] = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    bound[a.asname or a.name.split(".")[0]] = a.name
+            elif isinstance(node, ast.ImportFrom) and not node.level:
+                mod = node.module or ""
+                for a in node.names:
+                    if a.name != "*":
+                        from_map[a.asname or a.name] = mod
+        return bound, from_map
+
+    def _tag_module_refs(self, tree, raw, refs: dict[Pos, str]) -> None:
+        bound, _ = self._module_bindings(tree)
+        if not bound:
+            return
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Name)
+                and isinstance(node.ctx, ast.Load)
+                and node.id in bound
+            ):
+                refs[(node.lineno, node.col_offset)] = bound[node.id]
+        import_lines: set[int] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for ln in range(node.lineno, (node.end_lineno or node.lineno) + 1):
+                    import_lines.add(ln)
+        head = {v.split(".")[0]: v for v in bound.values()}
+        for r in raw:
+            if r.start[0] in import_lines and r.type == "NAME":
+                if r.string in bound:
+                    refs.setdefault(r.start, bound[r.string])
+                elif r.string in head:
+                    refs.setdefault(r.start, head[r.string])
+
+    def resolve_namespace(self, source: str, row: int, col: int) -> NamespaceRef | None:
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return None
+        analysis = self.analyze(source)
+        tok = analysis.token_at(row, col)
+        if tok is None or tok.type not in ("NAME", "KEYWORD"):
+            return None
+
+        bound, from_map = self._module_bindings(tree)
+
+        if tok.ref:
+            return NamespaceRef(kind="module", owner=tok.ref, module=tok.ref)
+
+        recv = self._attr_receiver(analysis, tok)
+        if recv is not None:
+            nsr = self._namespace_for_receiver(recv, bound, tree, row)
+            if nsr is not None:
+                return nsr
+
+        if not self._is_attr_tail(analysis, tok):
+            if tok.string in from_map and from_map[tok.string]:
+                mod = from_map[tok.string]
+                return NamespaceRef(
+                    kind="module", owner=mod, module=mod, from_import=True
+                )
+            nsr = self._namespace_for_receiver(tok.string, bound, tree, row)
+            if nsr is not None:
+                return nsr
+        return None
+
+    @staticmethod
+    def _prev_meaningful(analysis: Analysis, tok: Token) -> Token | None:
+        prev = None
+        for t in analysis.tokens:
+            if t.start >= tok.start:
+                break
+            if not t.is_layout and t.type != "COMMENT":
+                prev = t
+        return prev
+
+    def _is_attr_tail(self, analysis: Analysis, tok: Token) -> bool:
+        p = self._prev_meaningful(analysis, tok)
+        return p is not None and p.type == "OP" and p.string == "."
+
+    def _attr_receiver(self, analysis: Analysis, tok: Token) -> str | None:
+        """For ``a.b`` with the cursor on ``b``: return ``"a"`` (only one hop)."""
+        dot = self._prev_meaningful(analysis, tok)
+        if dot is None or dot.type != "OP" or dot.string != ".":
+            return None
+        recv = self._prev_meaningful(analysis, dot)
+        if recv is None or recv.type not in ("NAME", "KEYWORD"):
+            return None
+        before = self._prev_meaningful(analysis, recv)
+        if before is not None and before.type == "OP" and before.string == ".":
+            return None  # deeper chain than we resolve
+        return recv.string
+
+    def _namespace_for_receiver(
+        self, name: str, bound: dict[str, str], tree: ast.AST, row: int
+    ) -> NamespaceRef | None:
+        if name in bound:
+            return NamespaceRef(kind="module", owner=name, module=bound[name])
+
+        if name in ("self", "cls"):
+            cls = self._enclosing_classdef(tree, row)
+            if cls is not None:
+                return NamespaceRef(
+                    kind="namespace",
+                    owner=f"{name} → {cls.name}",
+                    members=self._class_members(cls),
+                )
+            return None
+
+        cls = self._classdef_by_name(tree, name)
+        if cls is not None:
+            return NamespaceRef(
+                kind="namespace", owner=cls.name, members=self._class_members(cls)
+            )
+
+        made = self._assigned_class(name, tree, row)
+        if made is not None:
+            return NamespaceRef(
+                kind="namespace",
+                owner=f"{name} → {made.name}",
+                members=self._class_members(made),
+            )
+        return None
+
+    @staticmethod
+    def _enclosing_classdef(tree: ast.AST, row: int) -> ast.ClassDef | None:
+        best = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                lo, hi = node.lineno, (node.end_lineno or node.lineno)
+                if lo <= row <= hi and (
+                    best is None or (hi - lo) < (best.end_lineno or best.lineno) - best.lineno
+                ):
+                    best = node
+        return best
+
+    @staticmethod
+    def _classdef_by_name(tree: ast.AST, name: str) -> ast.ClassDef | None:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == name:
+                return node
+        return None
+
+    def _assigned_class(
+        self, name: str, tree: ast.AST, row: int
+    ) -> ast.ClassDef | None:
+        """``name = SomeClass(...)`` where ``SomeClass`` is defined in this file."""
+        classes = {
+            n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)
+        }
+        hit: ast.ClassDef | None = None
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            if not any(
+                isinstance(t, ast.Name) and t.id == name for t in node.targets
+            ):
+                continue
+            val = node.value
+            if (
+                isinstance(val, ast.Call)
+                and isinstance(val.func, ast.Name)
+                and val.func.id in classes
+            ):
+                cand = self._classdef_by_name(tree, val.func.id)
+                if cand is None:
+                    continue
+                # prefer an assignment at or before the cursor
+                if node.lineno <= row or hit is None:
+                    hit = cand
+        return hit
+
+    @staticmethod
+    def _class_members(cls: ast.ClassDef) -> list[Member]:
+        methods: list[Member] = []
+        attrs: dict[str, Member] = {}
+        for node in cls.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods.append(Member(name=node.name, kind="method"))
+            elif isinstance(node, ast.Assign):
+                for t in node.targets:
+                    if isinstance(t, ast.Name):
+                        attrs.setdefault(t.id, Member(name=t.id, kind="attr"))
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                attrs.setdefault(node.target.id, Member(name=node.target.id, kind="attr"))
+        for node in ast.walk(cls):
+            tgts = []
+            if isinstance(node, ast.Assign):
+                tgts = node.targets
+            elif isinstance(node, ast.AnnAssign):
+                tgts = [node.target]
+            for t in tgts:
+                if (
+                    isinstance(t, ast.Attribute)
+                    and isinstance(t.value, ast.Name)
+                    and t.value.id in ("self", "cls")
+                ):
+                    attrs.setdefault(t.attr, Member(name=t.attr, kind="attr"))
+        methods.sort(key=lambda m: m.name.lower())
+        return methods + sorted(attrs.values(), key=lambda m: m.name.lower())
 
     def describe_line(self, source: str, lineno: int) -> str:
         lines = source.splitlines()
@@ -1079,3 +1312,22 @@ _LINE_CONCEPTS_EXPR = {
     "Attribute": ["attribute-access"],
     "ListLit": ["collection-literals"],
 }
+
+# Bundled standard-library member data (trust tier 2), loaded once on first use.
+_STDLIB_DATA: dict[str, dict[str, str]] | None = None
+
+
+def _stdlib_data() -> dict[str, dict[str, str]]:
+    global _STDLIB_DATA
+    if _STDLIB_DATA is None:
+        try:
+            text = (
+                _res_files("codecrawler.seeds")
+                .joinpath("python_stdlib.json")
+                .read_text(encoding="utf-8")
+            )
+            loaded = json.loads(text)
+            _STDLIB_DATA = loaded if isinstance(loaded, dict) else {}
+        except (OSError, ValueError, ModuleNotFoundError):
+            _STDLIB_DATA = {}
+    return _STDLIB_DATA

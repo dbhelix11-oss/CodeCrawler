@@ -28,6 +28,12 @@ _DEFAULTS: dict[str, dict[str, object]] = {
     },
     "display": {
         "verbosity": 1,  # 0 label only · 1 one sentence · 2 + why/example · 3 + fundamentals
+        "color": True,  # syntax-highlight the code pane when the terminal supports colour
+    },
+    "trust": {
+        "enabled": True,  # resolve names / namespaces at all (the "siblings" list)
+        "stdlib": True,  # treat standard-library modules as trusted without asking
+        "allow_import": False,  # allow the Ctrl-t "import it" path (runs module code)
     },
 }
 
@@ -62,6 +68,24 @@ context_lines = 3
 #   2  sentence + why it is there + an example
 #   3  everything above + linked language fundamentals (full text in line mode)
 verbosity = 1
+# Syntax-highlight the code pane (keywords, strings, comments, numbers, calls,
+# definitions). Ignored when the terminal has no colour support.
+color = true
+
+[trust]
+# Resolve what a name refers to and list the sibling names in its namespace
+# (the "math also defines: pi tau e ..." line). Turn off to disable it entirely.
+enabled = true
+# Standard-library modules (math, json, itertools, ...) are inspected from
+# bundled data without asking. Set false to require the trust key for those too.
+stdlib = true
+# Allow the Ctrl-t path, which trusts a module by *importing* it — this runs
+# that module's top-level code. Off by default; 't' (read source, no execution)
+# still works. Turn on only if you need member lists for C-extension modules.
+allow_import = false
+# Trusting a third-party module is done per-file at run time with the trust keys
+# and remembered in <data_dir>/trust.json, keyed by the file's path + a hash of
+# its contents.
 """
 
 
@@ -82,6 +106,14 @@ class AIConfig:
 @dataclass(frozen=True)
 class DisplayConfig:
     verbosity: int
+    color: bool = True
+
+
+@dataclass(frozen=True)
+class TrustConfig:
+    enabled: bool = True
+    stdlib: bool = True
+    allow_import: bool = False
 
 
 @dataclass(frozen=True)
@@ -89,6 +121,7 @@ class Config:
     general: GeneralConfig
     ai: AIConfig
     display: DisplayConfig
+    trust: TrustConfig = field(default_factory=TrustConfig)
     path: Path = field(default=DEFAULT_CONFIG_PATH)
 
     @property
@@ -106,6 +139,10 @@ class Config:
     @property
     def answer_path(self) -> Path:
         return self.general.data_dir / "answer.md"
+
+    @property
+    def trust_path(self) -> Path:
+        return self.general.data_dir / "trust.json"
 
 
 def _expand(p: str) -> Path:
@@ -142,8 +179,16 @@ def load(path: Path | str | None = None) -> Config:
     )
     verbosity = int(merged["display"]["verbosity"])
     verbosity = max(VERBOSITY_MIN, min(VERBOSITY_MAX, verbosity))
-    display = DisplayConfig(verbosity=verbosity)
-    return Config(general=general, ai=ai, display=display, path=cfg_path)
+    display = DisplayConfig(
+        verbosity=verbosity,
+        color=bool(merged["display"].get("color", True)),
+    )
+    trust = TrustConfig(
+        enabled=bool(merged["trust"].get("enabled", True)),
+        stdlib=bool(merged["trust"].get("stdlib", True)),
+        allow_import=bool(merged["trust"].get("allow_import", False)),
+    )
+    return Config(general=general, ai=ai, display=display, trust=trust, path=cfg_path)
 
 
 def ensure_file(path: Path | str | None = None) -> Path:

@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .base import Analysis, Analyzer, Token
+from .base import Analysis, Analyzer, Member, NamespaceRef, Token
 from .python_lang import PythonAnalyzer
 
 _ANALYZERS: list[Analyzer] = [PythonAnalyzer()]
 
-__all__ = ["Analysis", "Analyzer", "Token", "get", "for_path", "available"]
+__all__ = [
+    "Analysis", "Analyzer", "Member", "NamespaceRef", "Token",
+    "get", "for_path", "available",
+]
 
 
 def available() -> list[str]:

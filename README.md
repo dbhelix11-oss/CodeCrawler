@@ -39,6 +39,7 @@ First run creates `~/.config/codecrawler/config.toml` and seeds the database at
 | `Tab` / `Shift-Tab` | cycle explanation depth `0`–`3` (see below) |
 | `J` / `K` | scroll the explanation pane one line (`▲`/`▼` show more) |
 | `PgDn` / `PgUp` | scroll the explanation pane one page |
+| `t` / `Ctrl-t` | trust the module under the cursor — read its source / import it (see **Trust**) |
 | `?` | ask Claude about what's under the cursor |
 | `i` | import a pasted answer (bridge mode) |
 | `s` / `e` / `d` | save / edit-then-save / discard a fetched answer |
@@ -50,6 +51,11 @@ explained). The explanation comes from the database, with a fallback chain from
 the most specific `lexeme + type + role` down to a generic entry. In **line
 mode** the whole line is highlighted and the explanation is generated offline
 from the parsed syntax tree.
+
+The code pane is syntax-highlighted — keywords, strings, comments, numbers,
+function calls, and the names in `def` / `class` headers each get a colour. Set
+`[display] color = false` in the config to turn it off; it is skipped
+automatically on terminals with no colour support.
 
 ### Verbosity (`Tab`)
 
@@ -69,6 +75,35 @@ parameters*, *blocks and indentation*, *truthiness*, *mutability*, …). Each
 language's analyzer links its tokens and lines to these shared slugs, so the same
 concepts are reused when more languages are added. Missing concepts can be
 fetched with `?` and saved like any other entry.
+
+### Namespaces & trust
+
+At depth `2` and above the explanation pane adds a **siblings line** — the other
+names that sit beside the one under the cursor:
+
+- `math.pi` → `math also defines: tau  e  inf  sqrt  …`
+- `self.radius` inside a class → that class's other attributes and methods
+- `c` where `c = Circle(2)` → `Circle`'s members
+
+Names defined **in the file you're crawling** are resolved straight from the
+parsed syntax tree — nothing is executed. **Standard-library** modules are
+trusted automatically and read from bundled data.
+
+A **third-party** module is different: to list what's inside it CodeCrawler has
+to read files it didn't write, or import it. So third-party module names start
+*untrusted* — dimmed in the code pane at any depth above `0`. Move the cursor
+onto one and the status bar shows the trust keys for it:
+
+| key | what it does |
+| --- | --- |
+| `t` | locate the module's own `.py` source, parse it, list the names — **no code runs** |
+| `Ctrl-t` | `import` the module and inspect it — **this runs the module's top-level code**. Disabled unless `[trust] allow_import = true`; only needed for C-extension modules (`t` can't read those). |
+
+Both ask for a `y` first. The choice is saved per file in
+`<data_dir>/trust.json`, keyed by the file's path and a hash of its contents.
+Reopening the file re-applies a `t` trust silently (unless the file changed
+since), while a `Ctrl-t` trust always asks once more per session before it takes
+effect. Turn the whole feature off with `[trust] enabled = false`.
 
 ### Asking Claude (`?`)
 
@@ -103,11 +138,14 @@ codecrawler/
   config.py         ~/.config/codecrawler/config.toml
   db.py             SQLite schema, seeding, lookup resolution chain
   explain.py        engine: cursor context -> Explanation
-  languages/        base.py (Analyzer ABC + Token) and python_lang.py (tokenize + ast)
+  trust.py          per-file trust store for module inspection (trust.json)
+  languages/        base.py (Analyzer ABC + Token), python_lang.py (tokenize + ast),
+                    py_introspect.py (read-source / import a trusted module)
   ai/               prompt.py (shared), bridge.py (copy/paste), api.py (Anthropic SDK)
   ui/               curses app — all terminal code is confined here
-  seeds/python.json   the starter token database
-  seeds/concepts.json the language-neutral concept library
+  seeds/python.json         the starter token database
+  seeds/concepts.json       the language-neutral concept library
+  seeds/python_stdlib.json  bundled standard-library member lists
 tests/              pytest suite
 samples/hello.py    a file to crawl
 ```

@@ -1,5 +1,52 @@
 # Changelog
 
+## v1.3.0 — 2026-08-29
+
+Namespace resolution and per-file module trust.
+
+- At depth 2+ the explanation pane now shows a **"siblings" line** — the other
+  names that live beside the one under the cursor. `math.pi` lists `tau`, `e`,
+  `sqrt`, …; `self.radius` inside a class lists that class's other attributes
+  and methods; `c.area()` where `c = Circle(2)` lists `Circle`'s members.
+- Names defined **in the file being crawled** are resolved with no execution
+  (the parsed syntax tree only): classes, `self`, and locals bound to an
+  in-file class.
+- **Standard-library** modules are trusted automatically and served from
+  bundled data (`seeds/python_stdlib.json`, ~2000 names) — no import.
+- **Third-party modules start untrusted.** Above depth 0 their name is dimmed
+  in the code pane, and the status bar offers the trust keys only while the
+  cursor is on one. Press:
+  - `t` — read its `.py` source and list the names (no code runs)
+  - `Ctrl-t` — import it (this *runs* the module's top-level code). **Off by
+    default** — enable with `[trust] allow_import = true`; only needed for
+    C-extension modules, whose lists `t` cannot produce.
+  Both ask `y`/`n` first. The decision is saved per file in
+  `<data_dir>/trust.json` and keyed by the file's path + a hash of its
+  contents.
+- On reopening a file: source-trust (`t`) is re-applied silently unless the
+  file changed since (then it reverts to untrusted); import-trust (`Ctrl-t`)
+  always asks once more per session before it takes effect. If a trusted
+  single-file module's own source changed, the re-confirm prompt says so.
+- New config section `[trust]` (`enabled`, `stdlib`, `allow_import`).
+- `tools/gen_python_stdlib.py` regenerates the bundled data.
+- Tests: 93 cases (was 66).
+
+## v1.2.0 — 2026-08-29
+
+Syntax highlighting in the code pane. (Never tagged on its own; shipped as part
+of the v1.3.0 release.)
+
+- The code pane now colours tokens by kind: keywords, strings, comments,
+  numbers, function calls, and the names in `def` / `class` headers (decorators
+  too). The character-under-cursor block and the token underline still sit on
+  top, and the underlined token keeps its colour.
+- New `[display] color` config key (default `true`). Colour is skipped
+  automatically when the terminal reports no colour support, so nothing breaks
+  on a bare TTY.
+- The token → colour mapping is a pure helper (`ui/panes.py`:
+  `token_style` / `highlight_spans`), separate from the curses code, so other
+  languages reuse it once they tag the same token types and roles.
+
 ## v1.1.1 — 2026-08-29
 
 Navigation cleanup.

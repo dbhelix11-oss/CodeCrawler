@@ -27,6 +27,7 @@ class Token:
     role: str = ""  # AST-derived disambiguation, e.g. 'call' vs 'tuple' for '('
     note: str = ""  # extra human context, e.g. "the f-string ends here"
     concepts: tuple[str, ...] = ()  # background-concept slugs this token relates to
+    ref: str = ""  # for a name that refers to an imported module: that module's dotted name
 
     def covers(self, row: int, col: int) -> bool:
         return self.start <= (row, col) < self.end
@@ -72,6 +73,32 @@ class Analysis:
         return [t for t in self.tokens if not t.is_layout]
 
 
+@dataclass(frozen=True)
+class Member:
+    """One name inside a namespace (a class body, a module, …)."""
+
+    name: str
+    kind: str = ""  # "method" | "attr" | "class" | "func" | ""
+    blurb: str = ""  # one-line description, when known
+
+
+@dataclass
+class NamespaceRef:
+    """What the name under the cursor refers to, and the names beside it.
+
+    ``kind == "module"`` means *resolve the members elsewhere* (via the trust
+    layer): only ``module`` (the importable dotted name) is filled in.
+    ``kind == "namespace"`` is something defined in this same file — ``members``
+    is already populated and needs no trust.
+    """
+
+    kind: str  # "module" | "namespace"
+    owner: str  # display label, e.g. "math", "Circle", "self → Circle"
+    module: str = ""  # importable name, when kind == "module"
+    members: list[Member] = field(default_factory=list)  # when kind == "namespace"
+    from_import: bool = False  # a name pulled in by `from module import name`
+
+
 class Analyzer(abc.ABC):
     """Base class for per-language analyzers."""
 
@@ -89,3 +116,11 @@ class Analyzer(abc.ABC):
     def line_concepts(self, source: str, lineno: int) -> list[str]:
         """Background-concept slugs relevant to the constructs on line ``lineno``."""
         return []
+
+    def resolve_namespace(self, source: str, row: int, col: int) -> "NamespaceRef | None":
+        """What the name at ``(row, col)`` refers to, for the "siblings" list."""
+        return None
+
+    def module_members(self, module: str) -> list["Member"] | None:
+        """Bundled member list for a trusted-by-default module, or ``None``."""
+        return None

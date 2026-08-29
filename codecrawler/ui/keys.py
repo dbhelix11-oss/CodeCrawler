@@ -25,6 +25,8 @@ DEFAULT_BINDINGS: dict[str, list] = {
     "toggle_mode": ["m"],
     "cycle_verbosity": ["\t"],
     "cycle_verbosity_back": [curses.KEY_BTAB],
+    "trust_source": ["t"],  # trust the module under the cursor — read its source
+    "trust_import": [20],  # Ctrl-t — trust it by importing (runs its code)
     "ask": ["?"],
     "import_answer": ["i"],
     "save": ["s"],
@@ -61,6 +63,8 @@ HELP_LINES = [
     "  Tab / Shift-Tab     cycle explanation depth 0-3 (0 label .. 3 fundamentals)",
     "  J / K               scroll the explanation pane one line",
     "  PgDn / PgUp         scroll the explanation pane one page",
+    "  t                   trust the module under the cursor: read its source (no code runs)",
+    "  Ctrl-t              trust it by importing it — runs its code ([trust] allow_import)",
     "  ?                   ask Claude about what is under the cursor",
     "  i                   import a pasted answer (bridge mode)",
     "  s / e / d           save / edit-then-save / discard a fetched answer",
